@@ -1,0 +1,224 @@
+/* Nunito Font — bundled locally, no CDN */
+@font-face { font-family: 'Nunito'; src: url('./assets/fonts/Nunito-400.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url('./assets/fonts/Nunito-500.ttf') format('truetype'); font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url('./assets/fonts/Nunito-600.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url('./assets/fonts/Nunito-700.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url('./assets/fonts/Nunito-800.ttf') format('truetype'); font-weight: 800; font-display: swap; }
+@font-face { font-family: 'Nunito'; src: url('./assets/fonts/Nunito-900.ttf') format('truetype'); font-weight: 900; font-display: swap; }
+
+:root {
+  --warm-bg: #FFF9F2;
+  --warm-card: #FFFFFF;
+  --warm-border: #F0E6D9;
+  --warm-border-subtle: #F5EDE3;
+  --warm-text: #3D2F1E;
+  --warm-text-secondary: #6B5B4A;
+  --warm-text-muted: #8A7A6A;
+  --warm-text-light: #B0A090;
+  --warm-accent: #F97316;
+  --warm-accent-light: #FFF7ED;
+  --warm-accent-hover: #EA580C;
+  --warm-bg-subtle: #FFFBF5;
+  --warm-bg-warm: #FFF9F0;
+  --warm-bg-input: #FFFFFF;
+  --warm-sidebar: #FFFFFF;
+  --warm-sidebar-active: #FFF7ED;
+  --warm-sidebar-border: #F0E6D9;
+  --warm-sidebar-user-bg: #FFF7ED;
+  --warm-sidebar-user-border: #FDE68A;
+  --warm-streak-bg: linear-gradient(135deg, #FFF7ED, #FFEDD5);
+  --warm-streak-border: #FDE68A;
+  --warm-streak-text: #92400E;
+  --warm-streak-subtext: #B45309;
+  --warm-danger: #EF4444;
+  --warm-danger-bg: #FFF1F1;
+  --warm-danger-border: #FECACA;
+  --warm-badge-bg: #FDECEC;
+  --warm-badge-text: #E25A5A;
+  --warm-coin: #F59E0B;
+  --health-bar-track: #F5EDE3;
+  --health-green: #5CB85C;
+  --health-yellow: #E8A838;
+  --health-red: #E25A5A;
+  --health-green-bg: #EDF7ED;
+  --health-yellow-bg: #FFF8EC;
+  --health-red-bg: #FDECEC;
+  --warm-shadow: rgba(180, 150, 100, 0.1);
+  --warm-primary-shadow: rgba(249, 115, 22, 0.25);
+}
+
+html[data-theme='blue'] {
+  --warm-bg: #F3F9FF;
+  --warm-card: #FFFFFF;
+  --warm-border: #DDEAF8;
+  --warm-border-subtle: #E8F1FA;
+  --warm-text: #21354A;
+  --warm-text-secondary: #3D5570;
+  --warm-text-muted: #5A7A98;
+  --warm-text-light: #8194A8;
+  --warm-accent: #3B82F6;
+  --warm-accent-light: #EAF2FF;
+  --warm-accent-hover: #2563EB;
+  --warm-bg-subtle: #F8FBFF;
+  --warm-bg-warm: #F0F6FF;
+  --warm-bg-input: #FFFFFF;
+  --warm-sidebar: #FFFFFF;
+  --warm-sidebar-active: #EAF2FF;
+  --warm-sidebar-border: #DDEAF8;
+  --warm-sidebar-user-bg: #EAF2FF;
+  --warm-sidebar-user-border: #BAD6FC;
+  --warm-streak-bg: linear-gradient(135deg, #EAF2FF, #DBEAFE);
+  --warm-streak-border: #BAD6FC;
+  --warm-streak-text: #1E40AF;
+  --warm-streak-subtext: #2563EB;
+  --warm-primary-shadow: rgba(59, 130, 246, 0.25);
+}
+
+html[data-theme='rose'] {
+  --warm-bg: #FFF5F8;
+  --warm-card: #FFFFFF;
+  --warm-border: #F2DDE6;
+  --warm-border-subtle: #F7E6EE;
+  --warm-text: #4A2435;
+  --warm-text-secondary: #6E3E55;
+  --warm-text-muted: #8A6070;
+  --warm-text-light: #A37E8F;
+  --warm-accent: #EC4899;
+  --warm-accent-light: #FDEAF3;
+  --warm-accent-hover: #DB2777;
+  --warm-bg-subtle: #FFF9FB;
+  --warm-bg-warm: #FFF0F5;
+  --warm-bg-input: #FFFFFF;
+  --warm-sidebar: #FFFFFF;
+  --warm-sidebar-active: #FDEAF3;
+  --warm-sidebar-border: #F2DDE6;
+  --warm-sidebar-user-bg: #FDEAF3;
+  --warm-sidebar-user-border: #F9A8D4;
+  --warm-streak-bg: linear-gradient(135deg, #FDEAF3, #FCE7F3);
+  --warm-streak-border: #F9A8D4;
+  --warm-streak-text: #9D174D;
+  --warm-streak-subtext: #BE185D;
+  --warm-primary-shadow: rgba(236, 72, 153, 0.25);
+}
+
+html[data-theme='night'] {
+  --warm-bg: #0B0F19;
+  --warm-card: #1C2436;
+  --warm-border: #334155;
+  --warm-border-subtle: #2D3B4F;
+  --warm-text: #E2E8F0;
+  --warm-text-secondary: #CBD5E1;
+  --warm-text-muted: #94A3B8;
+  --warm-text-light: #64748B;
+  --warm-accent: #60A5FA;
+  --warm-accent-light: #24324A;
+  --warm-accent-hover: #3B82F6;
+  --warm-bg-subtle: #253149;
+  --warm-bg-warm: #2B3954;
+  --warm-bg-input: #1A2233;
+  --warm-sidebar: #141B2A;
+  --warm-sidebar-active: #223048;
+  --warm-sidebar-border: #334155;
+  --warm-sidebar-user-bg: #223048;
+  --warm-sidebar-user-border: #475569;
+  --warm-streak-bg: linear-gradient(135deg, #1C2436, #253149);
+  --warm-streak-border: #475569;
+  --warm-streak-text: #93C5FD;
+  --warm-streak-subtext: #60A5FA;
+  --warm-danger: #F87171;
+  --warm-danger-bg: #2A1F1F;
+  --warm-danger-border: #7F1D1D;
+  --warm-badge-bg: #2A1F1F;
+  --warm-badge-text: #F87171;
+  --warm-coin: #FBBF24;
+  --health-bar-track: #334155;
+  --health-green-bg: #1A2E1A;
+  --health-yellow-bg: #2E2A1A;
+  --health-red-bg: #2E1A1A;
+  --warm-shadow: rgba(0, 0, 0, 0.3);
+  --warm-primary-shadow: rgba(96, 165, 250, 0.25);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: var(--warm-bg);
+  color: var(--warm-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--warm-border); border-radius: 99px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter { animation: fadeIn 0.3s ease; }
+
+.tq-card {
+  background: var(--warm-card);
+  border-radius: 20px;
+  border: 1.5px solid var(--warm-border);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tq-card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px var(--warm-shadow);
+}
+
+.tq-btn {
+  border: none;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  border-radius: 14px;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tq-btn:hover { filter: brightness(1.05); transform: scale(1.02); }
+.tq-btn:active { transform: scale(0.97); }
+
+.tq-btn-primary {
+  background: var(--warm-accent);
+  color: #fff;
+  box-shadow: 0 4px 14px var(--warm-primary-shadow);
+}
+
+.tq-btn-secondary {
+  background: var(--warm-card);
+  color: var(--warm-text);
+  border: 1.5px solid var(--warm-border);
+}
+.tq-btn-secondary:hover {
+  border-color: var(--warm-accent);
+  color: var(--warm-accent);
+}
+
+/* Night theme: ensure inputs and selects are readable */
+html[data-theme='night'] input,
+html[data-theme='night'] textarea,
+html[data-theme='night'] select {
+  background-color: var(--warm-bg-input) !important;
+  color: var(--warm-text) !important;
+  border-color: var(--warm-border) !important;
+}
+html[data-theme='night'] input::placeholder,
+html[data-theme='night'] textarea::placeholder {
+  color: var(--warm-text-light) !important;
+}
+html[data-theme='night'] option {
+  background-color: var(--warm-card);
+  color: var(--warm-text);
+}

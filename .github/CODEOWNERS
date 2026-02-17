@@ -1,0 +1,22 @@
+# Code Owners for TidyQuest
+# These owners will be automatically requested for review when someone opens a pull request
+
+# Global owner (all files)
+* @mellow-fox
+
+# Security-sensitive files (require explicit approval)
+/SECURITY.md @mellow-fox
+/.github/ @mellow-fox
+/docker-compose.yml @mellow-fox
+/Dockerfile @mellow-fox
+/.env.example @mellow-fox
+
+# Server code (backend)
+/server/ @mellow-fox
+
+# Database schema changes
+/server/src/database.ts @mellow-fox
+
+# Authentication and security
+/server/src/middleware/auth.ts @mellow-fox
+/server/src/routes/auth.ts @mellow-fox

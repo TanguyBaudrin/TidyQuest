@@ -30,6 +30,35 @@ Perfect for families who want to:
 
 ---
 
+## 📸 Screenshots
+
+<details>
+<summary>Click to view screenshots</summary>
+
+### Dashboard
+![Dashboard](screenshots/dashboard.jpg)
+*Main dashboard showing task overview, streaks, and quick stats*
+
+### Rooms & Tasks
+![Rooms](screenshots/rooms.jpg)
+*Room view with task health bars and completion tracking*
+
+### Leaderboard
+![Leaderboard](screenshots/leaderboard.jpg)
+*Family competition with weekly/monthly rankings*
+
+### Rewards
+![Rewards](screenshots/rewards.jpg)
+*Reward catalog and redemption system*
+
+### Achievements
+![Achievements](screenshots/achievements.jpg)
+*Unlock badges for completing milestones*
+
+</details>
+
+---
+
 ## 🚀 Quick Start
 
 ### Prerequisites

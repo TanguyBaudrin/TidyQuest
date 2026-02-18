@@ -222,3 +222,98 @@ html[data-theme='night'] option {
   background-color: var(--warm-card);
   color: var(--warm-text);
 }
+
+/* ========================================
+   RESPONSIVE DESIGN - Mobile First
+   ======================================== */
+
+/* Utility classes for responsive behavior */
+.mobile-only { display: none; }
+.desktop-only { display: block; }
+
+/* Tablet breakpoint (max-width: 1024px) */
+@media (max-width: 1024px) {
+  body {
+    font-size: 14px;
+  }
+
+  .tq-card {
+    border-radius: 16px;
+  }
+
+  .tq-btn {
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+}
+
+/* Mobile breakpoint (max-width: 768px) */
+@media (max-width: 768px) {
+  .mobile-only { display: block; }
+  .desktop-only { display: none; }
+
+  body {
+    font-size: 14px;
+  }
+
+  .tq-card {
+    border-radius: 14px;
+    border-width: 1px;
+  }
+
+  .tq-btn {
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 15px;
+    min-height: 44px; /* Touch-friendly tap target */
+    justify-content: center;
+  }
+
+  /* Make buttons full-width on mobile when in containers */
+  .tq-btn-block {
+    width: 100%;
+  }
+
+  /* Mobile sidebar - hidden by default, slides in when open */
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Show mobile overlay when sidebar is open */
+  .mobile-overlay {
+    display: block !important;
+  }
+
+  /* Show mobile-only close button */
+  .mobile-only {
+    display: block !important;
+  }
+
+  /* Show hamburger menu on mobile */
+  .hamburger-menu {
+    display: flex !important;
+  }
+
+  /* Adjust main content for mobile - remove sidebar margin */
+  .main-content {
+    margin-left: 0 !important;
+    padding: 72px 16px 24px 16px !important;
+  }
+}
+
+/* Desktop - ensure sidebar is always visible */
+@media (min-width: 769px) {
+  .sidebar {
+    transform: translateX(0) !important;
+  }
+
+  .mobile-overlay {
+    display: none !important;
+  }
+}

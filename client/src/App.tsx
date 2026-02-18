@@ -39,6 +39,7 @@ function AppContent() {
     return (saved === 'blue' || saved === 'rose' || saved === 'night') ? saved : 'orange';
   });
   const [confetti, setConfetti] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -180,8 +181,41 @@ function AppContent() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--warm-bg)' }}>
       <ConfettiEffect show={confetti} />
-      <Sidebar user={user} />
-      <main style={{ marginLeft: 240, flex: 1, padding: '28px 36px', maxWidth: 1320, backgroundColor: 'var(--warm-bg)' }}>
+
+      {/* Mobile hamburger menu */}
+      <button
+        onClick={() => setIsMobileSidebarOpen(true)}
+        className="mobile-only hamburger-menu"
+        style={{
+          position: 'fixed',
+          top: 16,
+          left: 16,
+          zIndex: 40,
+          background: 'var(--warm-card)',
+          border: '1.5px solid var(--warm-border)',
+          borderRadius: 12,
+          width: 44,
+          height: 44,
+          display: 'none',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          boxShadow: '0 2px 8px var(--warm-shadow)',
+        }}
+        aria-label="Open menu"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M3 12h18M3 6h18M3 18h18" />
+        </svg>
+      </button>
+
+      <Sidebar
+        user={user}
+        isMobileOpen={isMobileSidebarOpen}
+        onClose={() => setIsMobileSidebarOpen(false)}
+      />
+
+      <main style={{ marginLeft: 240, flex: 1, padding: '28px 36px', maxWidth: 1320, backgroundColor: 'var(--warm-bg)' }} className="main-content">
         <Routes>
           <Route path="/" element={
             <>

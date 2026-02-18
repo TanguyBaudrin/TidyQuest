@@ -276,28 +276,41 @@ html[data-theme='night'] option {
     width: 100%;
   }
 
-  /* Force all input fields, textareas, and selects to be properly sized */
+  /* Force text inputs, textareas, and selects to be properly sized */
   input[type="text"],
   input[type="email"],
   input[type="password"],
-  input[type="number"],
-  input[type="tel"],
-  input[type="url"],
-  input[type="date"],
-  input[type="time"],
-  textarea,
-  select {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
+  textarea {
     font-size: 16px !important; /* Prevent zoom on iOS */
-    padding: 12px !important;
-    min-height: 44px !important;
+    box-sizing: border-box !important;
   }
 
-  /* Only make 2-column layouts single column on mobile */
+  /* Only make inputs 100% if they have flex: 1 (meaning they're in a flex container) */
+  input[style*="flex: 1"],
+  textarea[style*="flex: 1"] {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Page-specific responsive grids */
   .settings-grid {
     grid-template-columns: 1fr !important;
+  }
+
+  .room-type-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .task-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .calendar-layout {
+    grid-template-columns: 1fr !important;
+  }
+
+  .calendar-sidebar {
+    display: none !important;
   }
 
   /* Activity/History table - make it scroll horizontally on mobile */

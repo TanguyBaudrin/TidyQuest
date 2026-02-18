@@ -302,7 +302,7 @@ export function RoomsList({ rooms, language, isAdmin, onSelectRoom, onCreateRoom
                   {t('rooms.pickRoomType')}
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
+                <div className="room-type-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 20 }}>
                   {ROOM_TYPES.map((rt) => {
                     const colors = ROOM_COLORS[rt.type] || ROOM_COLORS.other;
                     const Icon = getRoomIcon(rt.type);
@@ -398,7 +398,7 @@ export function RoomsList({ rooms, language, isAdmin, onSelectRoom, onCreateRoom
                           </div>
 
                           {task.selected && (
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, paddingLeft: 28 }}>
+                            <div className="task-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, paddingLeft: 28 }}>
                               {/* Current State */}
                               <div>
                                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-text-light)', textTransform: 'uppercase', marginBottom: 6 }}>

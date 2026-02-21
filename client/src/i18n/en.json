@@ -256,7 +256,8 @@
       "rewardsSubtitle": "Spend your coins on real-life rewards",
       "profileSubtitle": "Customize your avatar & preferences",
       "settingsSubtitle": "Configure your experience",
-      "achievementsSubtitle": "Turn chores into a game with badges and milestones"
+      "achievementsSubtitle": "Turn chores into a game with badges and milestones",
+      "alreadyDoneToday": "You already completed this task today!"
     },
     "calendar": {
       "mon": "Mon",

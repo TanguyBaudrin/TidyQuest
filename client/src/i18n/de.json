@@ -256,7 +256,8 @@
       "rewardsSubtitle": "Gib deine Münzen für echte Belohnungen aus",
       "profileSubtitle": "Avatar und Einstellungen anpassen",
       "settingsSubtitle": "Erlebnis konfigurieren",
-      "achievementsSubtitle": "Mache Aufgaben mit Abzeichen und Meilensteinen zum Spiel"
+      "achievementsSubtitle": "Mache Aufgaben mit Abzeichen und Meilensteinen zum Spiel",
+      "alreadyDoneToday": "Du hast diese Aufgabe heute bereits erledigt!"
     },
     "calendar": {
       "mon": "Mo",

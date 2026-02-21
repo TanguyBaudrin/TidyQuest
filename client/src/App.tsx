@@ -40,6 +40,7 @@ function AppContent() {
     return (saved === 'blue' || saved === 'rose' || saved === 'night') ? saved : 'orange';
   });
   const [confetti, setConfetti] = useState(false);
+  const [taskErrorMsg, setTaskErrorMsg] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -123,7 +124,13 @@ function AppContent() {
       setTimeout(() => setConfetti(false), 2200);
     } catch (err) {
       setConfetti(false);
-      console.error('Failed to complete task:', err);
+      const msg = err instanceof Error ? err.message : '';
+      if (msg === 'already_done_today') {
+        setTaskErrorMsg(t('app.alreadyDoneToday'));
+      } else {
+        setTaskErrorMsg(msg || t('common.error'));
+      }
+      setTimeout(() => setTaskErrorMsg(null), 3500);
     }
   };
 
@@ -193,6 +200,19 @@ function AppContent() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--warm-bg)' }}>
       <ConfettiEffect show={confetti} />
+
+      {/* Task error toast */}
+      {taskErrorMsg && (
+        <div style={{
+          position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 9999, background: '#EF4444', color: '#fff',
+          padding: '12px 24px', borderRadius: 12, fontWeight: 700, fontSize: 15,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.18)', pointerEvents: 'none',
+          whiteSpace: 'nowrap',
+        }}>
+          {taskErrorMsg}
+        </div>
+      )}
 
       {/* Mobile hamburger menu */}
       <button

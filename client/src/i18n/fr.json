@@ -256,7 +256,8 @@
       "rewardsSubtitle": "Dépense tes pièces pour des récompenses réelles",
       "profileSubtitle": "Personnalisez votre avatar et vos préférences",
       "settingsSubtitle": "Configurez votre expérience",
-      "achievementsSubtitle": "Transforme les tâches en jeu avec des badges et objectifs"
+      "achievementsSubtitle": "Transforme les tâches en jeu avec des badges et objectifs",
+      "alreadyDoneToday": "Tu as déjà fait cette tâche aujourd'hui !"
     },
     "calendar": {
       "mon": "Lun",

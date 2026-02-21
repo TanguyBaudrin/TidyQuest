@@ -257,7 +257,8 @@
       "profileSubtitle": "Personalizza avatar e preferenze",
       "settingsSubtitle": "Configura la tua esperienza",
       "achievementsSubtitle": "Trasforma le faccende in un gioco con badge e traguardi",
-      "alreadyDoneToday": "Hai già completato questo compito oggi!"
+      "alreadyDoneToday": "Hai già completato questo compito oggi!",
+      "alreadyDoneByOther": "Qualcun altro ha già completato questo compito oggi!"
     },
     "calendar": {
       "mon": "Lun",

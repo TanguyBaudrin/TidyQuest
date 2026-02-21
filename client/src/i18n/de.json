@@ -257,7 +257,8 @@
       "profileSubtitle": "Avatar und Einstellungen anpassen",
       "settingsSubtitle": "Erlebnis konfigurieren",
       "achievementsSubtitle": "Mache Aufgaben mit Abzeichen und Meilensteinen zum Spiel",
-      "alreadyDoneToday": "Du hast diese Aufgabe heute bereits erledigt!"
+      "alreadyDoneToday": "Du hast diese Aufgabe heute bereits erledigt!",
+      "alreadyDoneByOther": "Jemand anderes hat diese Aufgabe heute bereits erledigt!"
     },
     "calendar": {
       "mon": "Mo",

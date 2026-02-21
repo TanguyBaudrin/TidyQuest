@@ -257,7 +257,8 @@
       "profileSubtitle": "Customize your avatar & preferences",
       "settingsSubtitle": "Configure your experience",
       "achievementsSubtitle": "Turn chores into a game with badges and milestones",
-      "alreadyDoneToday": "You already completed this task today!"
+      "alreadyDoneToday": "You already completed this task today!",
+      "alreadyDoneByOther": "Someone else already completed this task today!"
     },
     "calendar": {
       "mon": "Mon",

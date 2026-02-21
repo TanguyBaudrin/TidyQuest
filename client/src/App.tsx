@@ -127,6 +127,8 @@ function AppContent() {
       const msg = err instanceof Error ? err.message : '';
       if (msg === 'already_done_today') {
         setTaskErrorMsg(t('app.alreadyDoneToday'));
+      } else if (msg === 'already_done_by_other') {
+        setTaskErrorMsg(t('app.alreadyDoneByOther'));
       } else {
         setTaskErrorMsg(msg || t('common.error'));
       }

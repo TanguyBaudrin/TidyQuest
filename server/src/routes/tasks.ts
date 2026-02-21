@@ -129,12 +129,20 @@ router.post('/tasks/:id/complete', (req: AuthRequest, res: Response) => {
   // Always use server timestamp — never trust client-supplied completedAt
   const now = new Date().toISOString();
 
-  // Block multiple completions of the same task by the same user on the same day
-  const alreadyDoneToday = db.prepare(
+  // Block if current user already completed this task today
+  const alreadyDoneBySelf = db.prepare(
     "SELECT id FROM task_completions WHERE taskId = ? AND userId = ? AND date(completedAt) = date(?)"
   ).get(task.id, req.userId, now);
-  if (alreadyDoneToday) {
+  if (alreadyDoneBySelf) {
     return res.status(409).json({ error: 'already_done_today' });
+  }
+
+  // Block if someone else already completed this task today
+  const alreadyDoneByOther = db.prepare(
+    "SELECT id FROM task_completions WHERE taskId = ? AND userId != ? AND date(completedAt) = date(?)"
+  ).get(task.id, req.userId, now);
+  if (alreadyDoneByOther) {
+    return res.status(409).json({ error: 'already_done_by_other' });
   }
   const coins = getCoinsForEffort(task.effort, getCoinsByEffortConfig());
 

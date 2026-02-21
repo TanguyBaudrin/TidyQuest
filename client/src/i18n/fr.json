@@ -257,7 +257,8 @@
       "profileSubtitle": "Personnalisez votre avatar et vos préférences",
       "settingsSubtitle": "Configurez votre expérience",
       "achievementsSubtitle": "Transforme les tâches en jeu avec des badges et objectifs",
-      "alreadyDoneToday": "Tu as déjà fait cette tâche aujourd'hui !"
+      "alreadyDoneToday": "Tu as déjà fait cette tâche aujourd'hui !",
+      "alreadyDoneByOther": "Cette tâche a déjà été faite par quelqu'un d'autre aujourd'hui !"
     },
     "calendar": {
       "mon": "Lun",

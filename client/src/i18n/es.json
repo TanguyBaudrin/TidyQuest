@@ -257,7 +257,8 @@
       "profileSubtitle": "Personaliza tu avatar y preferencias",
       "settingsSubtitle": "Configura tu experiencia",
       "achievementsSubtitle": "Convierte las tareas en juego con insignias e hitos",
-      "alreadyDoneToday": "¡Ya completaste esta tarea hoy!"
+      "alreadyDoneToday": "¡Ya completaste esta tarea hoy!",
+      "alreadyDoneByOther": "¡Alguien más ya completó esta tarea hoy!"
     },
     "calendar": {
       "mon": "Lun",

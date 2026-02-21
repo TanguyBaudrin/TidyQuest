@@ -22,7 +22,7 @@ export function History({ language }: { language?: string }) {
     <div className="page-enter" style={{ maxWidth: 750 }}>
       <div className="tq-card" style={{ padding: 22 }}>
         <div className="history-table-scroll">
-          <div style={{
+          <div className="history-header" style={{
             display: 'grid', gridTemplateColumns: '44px 1fr 120px 100px 80px',
             gap: 12, padding: '0 8px 14px', borderBottom: '1.5px solid #F0E6D9',
             fontSize: 11, fontWeight: 800, color: '#B0A090', textTransform: 'uppercase', letterSpacing: 1,
@@ -35,7 +35,7 @@ export function History({ language }: { language?: string }) {
           </div>
 
           {history.map((h) => (
-            <div key={h.id} style={{
+            <div key={h.id} className="history-row" style={{
               display: 'grid', gridTemplateColumns: '44px 1fr 120px 100px 80px',
               gap: 12, padding: '14px 8px', alignItems: 'center',
               borderBottom: '1px solid #F5EDE3',
@@ -44,9 +44,10 @@ export function History({ language }: { language?: string }) {
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: '#3D2F1E' }}>{taskName(h.taskName, h.translationKey)}</div>
                 <div style={{ fontSize: 11, color: '#B0A090', fontWeight: 600 }}>{t('history.by')} {h.displayName}</div>
+                <div className="history-mobile-meta">{roomDisplayName(h.roomName, h.roomType || '')} · {timeAgo(h.completedAt)}</div>
               </div>
-              <div style={{ fontSize: 13, color: '#6B5B4A', fontWeight: 600 }}>{roomDisplayName(h.roomName, h.roomType || '')}</div>
-              <div style={{ fontSize: 12, color: '#B0A090', fontWeight: 600 }}>{timeAgo(h.completedAt)}</div>
+              <div className="history-col-room" style={{ fontSize: 13, color: '#6B5B4A', fontWeight: 600 }}>{roomDisplayName(h.roomName, h.roomType || '')}</div>
+              <div className="history-col-when" style={{ fontSize: 12, color: '#B0A090', fontWeight: 600 }}>{timeAgo(h.completedAt)}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', fontSize: 13, fontWeight: 800, color: '#F59E0B' }}>
                 +{h.coinsEarned} <CoinIcon />
               </div>

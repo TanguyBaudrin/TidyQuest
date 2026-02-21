@@ -9,7 +9,7 @@ interface CalendarProps {
 
 export function Calendar({ completions, tasks, language }: CalendarProps) {
   const { taskName, t, roomDisplayName } = useTranslation(language);
-  const localeMap: Record<string, string> = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES' };
+  const localeMap: Record<string, string> = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', it: 'it-IT' };
   const locale = localeMap[language || 'en'] || 'en-US';
   const today = new Date();
   const year = today.getFullYear();

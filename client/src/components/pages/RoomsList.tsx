@@ -473,7 +473,7 @@ export function RoomsList({ rooms, language, isAdmin, onSelectRoom, onCreateRoom
                               {/* Icon */}
                               <div>
                                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-text-light)', textTransform: 'uppercase', marginBottom: 6 }}>
-                                  Icon
+                                  {t('rooms.icon')}
                                 </div>
                                 <select
                                   value={task.iconKey || 'sparkle'}
@@ -485,7 +485,7 @@ export function RoomsList({ rooms, language, isAdmin, onSelectRoom, onCreateRoom
                                   }}
                                 >
                                   {TASK_ICON_OPTIONS.map((opt) => (
-                                    <option key={opt.key} value={opt.key}>{opt.label}</option>
+                                    <option key={opt.key} value={opt.key}>{t(`taskIcons.${opt.key}`)}</option>
                                   ))}
                                 </select>
                               </div>

@@ -39,6 +39,19 @@ function getUserAchievementStats(userId: number) {
     'SELECT COUNT(*) as count FROM task_completions WHERE userId = ? AND completedAt >= ?'
   ).get(userId, monday.toISOString()) as { count: number };
 
+  // Tasks completed on the most recent weekend (Sat+Sun)
+  const nowDay = now.getUTCDay(); // 0=Sun, 6=Sat
+  const daysToLastSat = nowDay === 6 ? 0 : nowDay === 0 ? 1 : nowDay + 1;
+  const lastSat = new Date(now);
+  lastSat.setUTCDate(now.getUTCDate() - daysToLastSat);
+  lastSat.setUTCHours(0, 0, 0, 0);
+  const lastSun = new Date(lastSat);
+  lastSun.setUTCDate(lastSat.getUTCDate() + 1);
+  lastSun.setUTCHours(23, 59, 59, 999);
+  const weekendRow = db.prepare(
+    'SELECT COUNT(*) as count FROM task_completions WHERE userId = ? AND completedAt >= ? AND completedAt <= ?'
+  ).get(userId, lastSat.toISOString(), lastSun.toISOString()) as { count: number };
+
   const allCompletions = db.prepare(
     "SELECT date(completedAt) as day FROM task_completions WHERE userId = ? GROUP BY date(completedAt) ORDER BY day"
   ).all(userId) as Array<{ day: string }>;
@@ -84,6 +97,7 @@ function getUserAchievementStats(userId: number) {
       coins: user.coins || 0,
       rooms_clean: roomsClean,
       weekly_tasks: weeklyRow.count,
+      weekend_tasks: weekendRow.count,
       perfect_weeks: perfectWeeks,
     }),
   };

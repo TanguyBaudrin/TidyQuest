@@ -539,6 +539,25 @@ router.delete('/:id', (req: AuthRequest, res: Response) => {
   res.json({ success: true });
 });
 
+// Admin: adjust coins for a user (positive = add, negative = remove)
+router.post('/:id/adjust-coins', (req: AuthRequest, res: Response) => {
+  if (!ensureAdmin(req.userId)) {
+    return res.status(403).json({ error: 'Admin only' });
+  }
+
+  const targetUser = db.prepare(`SELECT ${USER_SELECT} FROM users WHERE id = ?`).get(req.params.id) as any;
+  if (!targetUser) return res.status(404).json({ error: 'User not found' });
+
+  const amount = Number(req.body.amount);
+  if (!Number.isFinite(amount) || amount === 0) {
+    return res.status(400).json({ error: 'amount must be a non-zero number' });
+  }
+
+  db.prepare('UPDATE users SET coins = MAX(0, coins + ?) WHERE id = ?').run(amount, req.params.id);
+  const updated = db.prepare(`SELECT ${USER_SELECT} FROM users WHERE id = ?`).get(req.params.id) as any;
+  res.json(updated);
+});
+
 router.get('/registration-config', authMiddleware, (req: AuthRequest, res: Response) => {
   const row = db.prepare("SELECT value FROM app_settings WHERE key = 'registrationEnabled'").get() as { value: string } | undefined;
   const registrationEnabled = row ? row.value !== '0' : true;

@@ -63,8 +63,9 @@ function AppContent() {
       setCompletions(hist.history || []);
       setCoinsByEffort(coinCfg.coinsByEffort || { 1: 5, 2: 10, 3: 15, 4: 20, 5: 25 });
       setAchievementsData(ach);
+      await refreshUser();
     } catch { /* not logged in */ }
-  }, [leaderboardPeriod]);
+  }, [leaderboardPeriod, refreshUser]);
 
   useEffect(() => {
     if (user) loadDashboard();
@@ -81,6 +82,20 @@ function AppContent() {
       loadRewards();
     }
   }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Poll every 15s to reflect other users' actions without requiring F5
+  useEffect(() => {
+    if (!user) return;
+    const tick = () => {
+      if (document.visibilityState === 'visible') loadDashboard();
+    };
+    const interval = setInterval(tick, 15000);
+    document.addEventListener('visibilitychange', tick);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', tick);
+    };
+  }, [user, loadDashboard]);
 
   const loadRewards = useCallback(async () => {
     try {
@@ -129,6 +144,8 @@ function AppContent() {
         setTaskErrorMsg(t('app.alreadyDoneToday'));
       } else if (msg === 'already_done_by_other') {
         setTaskErrorMsg(t('app.alreadyDoneByOther'));
+      } else if (msg === 'not_assigned') {
+        setTaskErrorMsg(t('app.notAssigned'));
       } else {
         setTaskErrorMsg(msg || t('common.error'));
       }
@@ -258,8 +275,10 @@ function AppContent() {
                 <Dashboard
                   data={dashboardData}
                   family={family}
+                  users={familySettings}
                   language={user.language}
                   onCompleteTask={handleCompleteTask}
+                  onRefresh={loadDashboard}
                   onNavigateToRoom={(id) => navigate(`/rooms/${id}`)}
                   onNavigateToActivity={() => navigate('/activity')}
                   onRewardRequestAction={async (id, status) => {
@@ -276,12 +295,17 @@ function AppContent() {
               <PageHeader title={t('nav.rooms')} subtitle={`${rooms.length} ${t('app.roomsConfigured')}`} user={user} onCoinsClick={() => navigate('/rewards')} onStreakClick={() => navigate('/achievements')} />
               <RoomsList rooms={rooms} language={user.language} onSelectRoom={(id) => navigate(`/rooms/${id}`)}
                 isAdmin={user.role === 'admin'}
+                users={familySettings}
                 onCreateRoom={async (data) => {
-                  await api.createRoom({ name: data.name, roomType: data.roomType, color: data.color, accentColor: data.accentColor, tasks: data.tasks });
+                  await api.createRoom({ name: data.name, roomType: data.roomType, color: data.color, accentColor: data.accentColor, tasks: data.tasks, assignedUserId: data.assignedUserId });
                   setRooms(await api.getRooms());
                 }}
                 onDeleteRoom={async (roomId) => {
                   await api.deleteRoom(roomId);
+                  setRooms(await api.getRooms());
+                }}
+                onAssignRoom={async (roomId, assignedUserId, force) => {
+                  await api.updateRoom(roomId, { assignedUserId, ...(force ? { force: true } : {}) });
                   setRooms(await api.getRooms());
                 }}
               />
@@ -289,7 +313,7 @@ function AppContent() {
           } />
 
           <Route path="/rooms/:id" element={
-            <RoomDetailWrapper rooms={rooms} user={user} onCompleteTask={handleCompleteTask} onRefresh={loadDashboard} />
+            <RoomDetailWrapper rooms={rooms} user={user} users={familySettings} coinsByEffort={coinsByEffort} onCompleteTask={handleCompleteTask} onRefresh={loadDashboard} />
           } />
 
           <Route path="/calendar" element={
@@ -309,13 +333,13 @@ function AppContent() {
           <Route path="/activity" element={
             <>
               <PageHeader title={t('nav.activity')} subtitle={t('app.activitySubtitle')} user={user} onCoinsClick={() => navigate('/rewards')} onStreakClick={() => navigate('/achievements')} />
-              <History language={user.language} />
+              <History language={user.language} isAdmin={user.role === 'admin'} />
             </>
           } />
           <Route path="/history" element={
             <>
               <PageHeader title={t('nav.activity')} subtitle={t('app.activitySubtitle')} user={user} onCoinsClick={() => navigate('/rewards')} onStreakClick={() => navigate('/achievements')} />
-              <History language={user.language} />
+              <History language={user.language} isAdmin={user.role === 'admin'} />
             </>
           } />
 
@@ -374,6 +398,10 @@ function AppContent() {
                 onChangeTheme={setTheme}
                 onExport={handleExport}
                 onImport={handleImport}
+                onAdjustCoins={async (userId: number, amount: number) => {
+                  await api.adjustCoins(userId, amount);
+                  setFamilySettings(await api.getUsers());
+                }}
               />
             </>
           } />
@@ -391,13 +419,13 @@ function AppContent() {
                 rewards={rewardsData.rewards}
                 mine={rewardsData.mine}
                 userCoins={user.coins}
-                onRedeem={async (rewardId) => {
+                onRedeem={async (rewardId: number) => {
                   await api.redeemReward(rewardId);
                   await refreshUser();
                   await loadDashboard();
                   await loadRewards();
                 }}
-                onCancel={async (redemptionId) => {
+                onCancel={async (redemptionId: number) => {
                   await api.cancelRedemption(redemptionId);
                   await refreshUser();
                   await loadDashboard();
@@ -413,7 +441,7 @@ function AppContent() {
   );
 }
 
-function RoomDetailWrapper({ rooms, user, onCompleteTask, onRefresh }: { rooms: any[]; user: any; onCompleteTask: (id: number) => void; onRefresh: () => void }) {
+function RoomDetailWrapper({ rooms, user, users, coinsByEffort, onCompleteTask, onRefresh }: { rooms: any[]; user: any; users?: any[]; coinsByEffort: Record<number, number>; onCompleteTask: (id: number) => void; onRefresh: () => void }) {
   const navigate = useNavigate();
   const { t, roomDisplayName } = useTranslation(user?.language || 'en');
   const { id: idParam } = useParams<{ id: string }>();
@@ -435,7 +463,7 @@ function RoomDetailWrapper({ rooms, user, onCompleteTask, onRefresh }: { rooms: 
   return (
     <>
       <PageHeader title={roomDisplayName(room.name, room.roomType)} subtitle={`${room.tasks?.length || 0} ${t('rooms.tasksTracked')}`} user={user} onCoinsClick={() => navigate('/rewards')} onStreakClick={() => navigate('/achievements')} />
-      <RoomDetail room={room} language={user?.language} isAdmin={user?.role === 'admin'} onCompleteTask={onCompleteTask} onBack={() => navigate('/rooms')} onRefresh={onRefresh} />
+      <RoomDetail room={room} language={user?.language} isAdmin={user?.role === 'admin'} currentUserId={user?.id} currentUserRole={user?.role} users={users} coinsByEffort={coinsByEffort} onCompleteTask={onCompleteTask} onBack={() => navigate('/rooms')} onRefresh={onRefresh} />
     </>
   );
 }

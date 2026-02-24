@@ -122,6 +122,14 @@ export function initDatabase() {
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
     );
 
+    CREATE TABLE IF NOT EXISTS task_assignees (
+      taskId INTEGER NOT NULL,
+      userId INTEGER NOT NULL,
+      PRIMARY KEY (taskId, userId),
+      FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+    );
+
   `);
 
   // Indexes for frequently queried columns
@@ -146,6 +154,11 @@ export function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN notes TEXT`,
     `ALTER TABLE tasks ADD COLUMN translationKey TEXT`,
     `ALTER TABLE tasks ADD COLUMN iconKey TEXT`,
+    `ALTER TABLE rooms ADD COLUMN assignedUserId INTEGER REFERENCES users(id) ON DELETE SET NULL`,
+    `ALTER TABLE tasks ADD COLUMN assignedToChildren INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN assignedUserId INTEGER REFERENCES users(id) ON DELETE SET NULL`,
+    `ALTER TABLE tasks ADD COLUMN assignmentMode TEXT NOT NULL DEFAULT 'first'`,
+    `ALTER TABLE task_assignees ADD COLUMN coinPercentage INTEGER NOT NULL DEFAULT 0`,
   ];
 
   for (const sql of migrations) {
@@ -157,6 +170,17 @@ export function initDatabase() {
         throw e;
       }
     }
+  }
+
+  // One-time migration: populate task_assignees from legacy tasks.assignedUserId
+  const migratedAssignees = db.prepare("SELECT value FROM app_settings WHERE key = 'taskAssigneesMigrated_v1'").get() as any;
+  if (!migratedAssignees) {
+    const tasksWithAssignee = db.prepare('SELECT id, assignedUserId FROM tasks WHERE assignedUserId IS NOT NULL').all() as { id: number; assignedUserId: number }[];
+    const insertAssignee = db.prepare('INSERT OR IGNORE INTO task_assignees (taskId, userId) VALUES (?, ?)');
+    for (const t of tasksWithAssignee) {
+      insertAssignee.run(t.id, t.assignedUserId);
+    }
+    db.prepare("INSERT OR REPLACE INTO app_settings (key, value) VALUES ('taskAssigneesMigrated_v1', '1')").run();
   }
 
   // Populate translationKey for existing tasks that match default task names

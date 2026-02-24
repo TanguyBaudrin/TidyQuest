@@ -19,8 +19,9 @@ TidyQuest turns boring chores into quests:
 - **🏆 Leaderboard**: Compete with family members for top position
 - **🎖️ Achievements**: Unlock badges for milestones (100 tasks, 30-day streak, etc.)
 - **📅 Calendar View**: See upcoming due dates at a glance
-- **🌍 Multilingual**: English, French, German, Spanish
+- **🌍 Multilingual**: English, French, German, Spanish, Italian
 - **📱 Telegram Notifications**: Optional reminders for due tasks and rewards
+- **👥 Shared Task Completion**: Multiple family members can complete tasks together with automatic reward splitting
 
 Perfect for families who want to:
 - Make chores fun for kids
@@ -141,6 +142,7 @@ On first launch, the database is empty. Create an admin account via the **Regist
 
 ### For Everyone
 - ✅ **Complete Tasks**: Mark chores as done, earn coins
+- 🤝 **Shared Tasks**: Complete tasks with other family members and split rewards
 - 💎 **Redeem Rewards**: Request rewards like "Movie Night Pick" or "Extra Game Time"
 - 📊 **Track Progress**: See your current streak, coins, and achievements
 - 🏠 **Room Management**: Organize tasks by room (Kitchen, Bedroom, Bathroom, etc.)
@@ -149,7 +151,7 @@ On first launch, the database is empty. Create an admin account via the **Regist
 - 👥 **User Management**: Create family members (admin/member/child roles)
 - 📝 **Task CRUD**: Create, edit, delete tasks with custom frequencies (1-365 days)
 - 🎁 **Reward System**: Approve/reject reward requests, manage catalog
-- ⚙️ **Global Settings**: Configure coins-per-effort, Telegram notifications
+- ⚙️ **Global Settings**: Configure coins-per-effort, Telegram notifications, shared task options
 - 🏖️ **Vacation Mode**: Pause task health decay during family vacations
 - 📤 **Backup/Restore**: Export full database as JSON
 
@@ -242,9 +244,13 @@ Notification types:
 
 ### Completing Tasks
 1. Open a room
-2. Click ✅ on a task row
-3. Earn coins (5-25 based on effort level 1-5)
-4. Health bar resets to 100%
+2. Click ✅ on a task row to complete it yourself
+3. Or click **👥 Shared done** to complete with others:
+   - Select family members who helped
+   - Rewards (coins & streak) are split equally among participants
+   - Optional: Admins can enable custom percentage splitting in Settings
+4. Earn coins (5-25 based on effort level 1-5)
+5. Health bar resets to 100%
 
 ### Redeeming Rewards
 1. Go to **Rewards** page
@@ -254,6 +260,17 @@ Notification types:
 
 ### Vacation Mode
 Admin can enable in **Settings** to pause all health decay. Useful for family trips.
+
+### Shared Task Settings
+Admins can configure shared task completion in **Settings > Shared Tasks**:
+- **Enable Shared Tasks**: Show/hide the "Shared done" button for all users
+- **Allow Custom Percentages**: Let admins manually adjust reward distribution (default is equal split)
+
+**Use Cases**:
+- Parents complete chores together while kids are at school
+- Siblings team up on big cleaning projects
+- Admins can validate tasks on behalf of children who don't have devices
+- Flexible reward splitting for contributions of varying effort
 
 ---
 

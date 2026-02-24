@@ -46,6 +46,13 @@ function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const refreshRooms = useCallback(async () => {
+    try {
+      const roomsData = await api.getRooms();
+      setRooms(roomsData);
+    } catch { /* ignore */ }
+  }, []);
+
   const loadDashboard = useCallback(async () => {
     try {
       const [dash, lb, hist, users, coinCfg, ach, roomsData] = await Promise.all([
@@ -78,8 +85,10 @@ function AppContent() {
   useEffect(() => {
     if (!user) return;
     const path = location.pathname;
-    if (path === '/' || path === '/rooms' || path.startsWith('/rooms/')) {
+    if (path === '/' || path === '/rooms') {
       loadDashboard();
+    } else if (path.startsWith('/rooms/')) {
+      refreshRooms();
     }
     if (path === '/rewards') {
       loadRewards();
@@ -137,8 +146,8 @@ function AppContent() {
     try {
       setConfetti(true);
       await api.completeTask(taskId);
-      await refreshUser();
-      await loadDashboard();
+      refreshUser();
+      await refreshRooms();
       setTimeout(() => setConfetti(false), 2200);
     } catch (err) {
       setConfetti(false);
@@ -316,7 +325,7 @@ function AppContent() {
           } />
 
           <Route path="/rooms/:id" element={
-            <RoomDetailWrapper rooms={rooms} user={user} users={familySettings} coinsByEffort={coinsByEffort} onCompleteTask={handleCompleteTask} onRefresh={loadDashboard} />
+            <RoomDetailWrapper rooms={rooms} user={user} users={familySettings} coinsByEffort={coinsByEffort} onCompleteTask={handleCompleteTask} onRefresh={refreshRooms} />
           } />
 
           <Route path="/calendar" element={

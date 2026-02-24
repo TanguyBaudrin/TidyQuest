@@ -152,6 +152,8 @@
       "themeNight": "Night",
       "vacationMode": "Vacation Mode",
       "vacationDesc": "Pause all task reminders while you're away",
+      "vacationSince": "On vacation since",
+      "vacationReturnDate": "Return date",
       "registrationEnabled": "Allow New Registrations",
       "registrationEnabledDesc": "When disabled, no new accounts can be created from the registration page.",
       "adminRequired": "Parent admin required to change settings.",

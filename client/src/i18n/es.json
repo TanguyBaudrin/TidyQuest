@@ -152,6 +152,8 @@
       "themeNight": "Noche",
       "vacationMode": "Modo vacaciones",
       "vacationDesc": "Pausar todos los recordatorios de tareas mientras estás fuera",
+      "vacationSince": "De vacaciones desde",
+      "vacationReturnDate": "Fecha de regreso",
       "registrationEnabled": "Permitir nuevos registros",
       "registrationEnabledDesc": "Si está desactivado, no se pueden crear nuevas cuentas desde la página de registro.",
       "adminRequired": "Se requiere un padre administrador para cambiar ajustes.",

@@ -346,6 +346,9 @@ export function initDatabase() {
   db.prepare(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('registrationEnabled', '1')"
   ).run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('vacationMode', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('vacationStartDate', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('vacationEndDate', '')").run();
 
   const rewardCount = (db.prepare('SELECT COUNT(*) as count FROM rewards').get() as { count: number }).count;
   if (rewardCount === 0) {

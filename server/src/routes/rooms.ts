@@ -3,7 +3,7 @@ import db from '../database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { calculateHealth } from '../utils/health';
 import { suggestTaskIcon } from '../utils/taskIcons';
-import { ensureAdmin } from '../utils/adminHelpers';
+import { ensureAdmin, getGlobalVacation } from '../utils/adminHelpers';
 
 const router = Router();
 
@@ -128,7 +128,7 @@ router.use(authMiddleware);
 // List all rooms with computed health (single JOIN query — no N+1)
 router.get('/', (req: AuthRequest, res: Response) => {
   const rooms = db.prepare('SELECT * FROM rooms ORDER BY sortOrder, id').all() as any[];
-  const user = db.prepare('SELECT isVacationMode, vacationStartDate FROM users WHERE id = ?').get(req.userId) as any;
+  const vacation = getGlobalVacation();
 
   // Fetch all tasks in one query, then group by roomId
   const allTasks = db.prepare('SELECT * FROM tasks').all() as any[];
@@ -195,7 +195,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
         completedTodayBy: completedTodayByTask.get(t.id) || null,
         assignmentMode: mode,
         sharedCompletions: (mode === 'shared' || mode === 'custom') ? (sharedCompletionsByTask.get(t.id) || []) : undefined,
-        health: calculateHealth(t.lastCompletedAt, t.frequencyDays, !!user.isVacationMode, user.vacationStartDate),
+        health: calculateHealth(t.lastCompletedAt, t.frequencyDays, vacation.isVacation, vacation.startDate),
       };
     });
 

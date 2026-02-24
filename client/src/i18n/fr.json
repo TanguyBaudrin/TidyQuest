@@ -152,6 +152,8 @@
       "themeNight": "Nuit",
       "vacationMode": "Mode vacances",
       "vacationDesc": "Suspendre tous les rappels de tâches pendant votre absence",
+      "vacationSince": "En vacances depuis le",
+      "vacationReturnDate": "Date de retour",
       "registrationEnabled": "Autoriser les nouvelles inscriptions",
       "registrationEnabledDesc": "Si désactivé, aucun nouveau compte ne peut être créé depuis la page d'inscription.",
       "adminRequired": "Un parent admin est requis pour modifier les paramètres.",

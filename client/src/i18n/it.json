@@ -152,6 +152,8 @@
       "themeNight": "Notte",
       "vacationMode": "Modalità vacanza",
       "vacationDesc": "Metti in pausa i promemoria mentre sei via",
+      "vacationSince": "In vacanza dal",
+      "vacationReturnDate": "Data di ritorno",
       "registrationEnabled": "Consenti nuove registrazioni",
       "registrationEnabledDesc": "Quando disattivato, non si possono creare nuovi account dalla pagina di registrazione.",
       "adminRequired": "Serve un admin genitore per modificare le impostazioni.",

@@ -39,6 +39,7 @@ function AppContent() {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('tidyquest_theme') : null;
     return (saved === 'blue' || saved === 'rose' || saved === 'night') ? saved : 'orange';
   });
+  const [vacationConfig, setVacationConfig] = useState<{ vacationMode: boolean; vacationStartDate: string | null; vacationEndDate: string | null } | null>(null);
   const [confetti, setConfetti] = useState(false);
   const [taskErrorMsg, setTaskErrorMsg] = useState<string | null>(null);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -56,6 +57,7 @@ function AppContent() {
         api.achievements(),
       ]);
       setDashboardData(dash);
+      if (dash.vacation) setVacationConfig(dash.vacation);
       setRooms(await api.getRooms());
       setLeaderboard(lb);
       setFamily(lb);
@@ -356,9 +358,10 @@ function AppContent() {
               <Settings
                 user={user}
                 family={familySettings}
-                onToggleVacation={async (enabled) => {
-                  await api.updateSettings(user.id, { isVacationMode: enabled });
-                  await refreshUser();
+                vacationConfig={vacationConfig ?? undefined}
+                onUpdateVacation={async (data) => {
+                  const updated = await api.updateVacationConfig(data);
+                  setVacationConfig(updated);
                 }}
                 onUpdateRole={async (targetUserId, role) => {
                   await api.updateUserRole(targetUserId, role);

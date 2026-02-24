@@ -2,14 +2,16 @@ import { Router, Response } from 'express';
 import db from '../database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { calculateHealth } from '../utils/health';
+import { getGlobalVacation } from '../utils/adminHelpers';
 
 const router = Router();
 router.use(authMiddleware);
 
 router.get('/', (req: AuthRequest, res: Response) => {
   const user = db.prepare(
-    'SELECT id, username, displayName, role, avatarColor, avatarType, avatarPreset, avatarPhotoUrl, coins, currentStreak, goalCoins, goalStartAt, goalEndAt, lastActiveDate, isVacationMode, vacationStartDate, language FROM users WHERE id = ?'
+    'SELECT id, username, displayName, role, avatarColor, avatarType, avatarPreset, avatarPhotoUrl, coins, currentStreak, goalCoins, goalStartAt, goalEndAt, lastActiveDate, language FROM users WHERE id = ?'
   ).get(req.userId) as any;
+  const vacation = getGlobalVacation();
 
   const rooms = db.prepare('SELECT * FROM rooms ORDER BY sortOrder, id').all() as any[];
   const allTasks: any[] = [];
@@ -57,7 +59,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
   const roomsWithHealth = rooms.map((room) => {
     const tasks = tasksByRoom.get(room.id) || [];
     const tasksWithHealth = tasks.map((t) => {
-      const health = calculateHealth(t.lastCompletedAt, t.frequencyDays, !!user.isVacationMode, user.vacationStartDate);
+      const health = calculateHealth(t.lastCompletedAt, t.frequencyDays, vacation.isVacation, vacation.startDate);
       const safeFreq = Math.max(1 / 24, Number(t.frequencyDays) || 7);
       const dueDateTs = t.lastCompletedAt
         ? new Date(t.lastCompletedAt).getTime() + safeFreq * 86400000
@@ -185,6 +187,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
     pendingRewardRequests,
     currentUser: user,
     recentActivity,
+    vacation: { vacationMode: vacation.isVacation, vacationStartDate: vacation.startDate, vacationEndDate: vacation.endDate },
   });
 });
 

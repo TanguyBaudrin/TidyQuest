@@ -176,4 +176,9 @@ export const api = {
 
   adjustCoins: (userId: number, amount: number) =>
     apiFetch<any>(`/users/${userId}/adjust-coins`, { method: 'POST', body: JSON.stringify({ amount }) }),
+
+  getVacationConfig: () =>
+    apiFetch<{ vacationMode: boolean; vacationStartDate: string | null; vacationEndDate: string | null }>('/users/vacation-config'),
+  updateVacationConfig: (data: { vacationMode?: boolean; vacationEndDate?: string | null }) =>
+    apiFetch<{ vacationMode: boolean; vacationStartDate: string | null; vacationEndDate: string | null }>('/users/vacation-config', { method: 'PUT', body: JSON.stringify(data) }),
 };

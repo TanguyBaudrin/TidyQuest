@@ -7,7 +7,7 @@ import db from '../database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { DEFAULT_COINS_BY_EFFORT, normalizeCoinsByEffortConfig } from '../utils/health';
 import { NotificationTypeSettings, sendTelegramMessageDetailed } from '../utils/notifications';
-import { ensureAdmin, getCoinsByEffortConfig } from '../utils/adminHelpers';
+import { ensureAdmin, getCoinsByEffortConfig, getGlobalVacation } from '../utils/adminHelpers';
 
 const router = Router();
 router.use(authMiddleware);
@@ -556,6 +556,38 @@ router.post('/:id/adjust-coins', (req: AuthRequest, res: Response) => {
   db.prepare('UPDATE users SET coins = MAX(0, coins + ?) WHERE id = ?').run(amount, req.params.id);
   const updated = db.prepare(`SELECT ${USER_SELECT} FROM users WHERE id = ?`).get(req.params.id) as any;
   res.json(updated);
+});
+
+router.get('/vacation-config', (req: AuthRequest, res: Response) => {
+  if (!ensureAdmin(req.userId)) return res.status(403).json({ error: 'Admin only' });
+  const v = getGlobalVacation();
+  res.json({ vacationMode: v.isVacation, vacationStartDate: v.startDate, vacationEndDate: v.endDate });
+});
+
+router.put('/vacation-config', (req: AuthRequest, res: Response) => {
+  if (!ensureAdmin(req.userId)) return res.status(403).json({ error: 'Admin only' });
+
+  const { vacationMode, vacationEndDate } = req.body as { vacationMode?: boolean; vacationEndDate?: string | null };
+
+  if (vacationMode !== undefined) {
+    const currentMode = (db.prepare("SELECT value FROM app_settings WHERE key = 'vacationMode'").get() as any)?.value;
+    if (vacationMode && currentMode !== '1') {
+      db.prepare("UPDATE app_settings SET value = '1', updatedAt = datetime('now') WHERE key = 'vacationMode'").run();
+      db.prepare("UPDATE app_settings SET value = ?, updatedAt = datetime('now') WHERE key = 'vacationStartDate'").run(new Date().toISOString());
+    } else if (!vacationMode) {
+      db.prepare("UPDATE app_settings SET value = '0', updatedAt = datetime('now') WHERE key = 'vacationMode'").run();
+      db.prepare("UPDATE app_settings SET value = '', updatedAt = datetime('now') WHERE key = 'vacationStartDate'").run();
+      db.prepare("UPDATE app_settings SET value = '', updatedAt = datetime('now') WHERE key = 'vacationEndDate'").run();
+    }
+  }
+
+  if (vacationEndDate !== undefined) {
+    db.prepare("UPDATE app_settings SET value = ?, updatedAt = datetime('now') WHERE key = 'vacationEndDate'")
+      .run(vacationEndDate ? new Date(vacationEndDate).toISOString() : '');
+  }
+
+  const v = getGlobalVacation();
+  res.json({ vacationMode: v.isVacation, vacationStartDate: v.startDate, vacationEndDate: v.endDate });
 });
 
 router.get('/registration-config', authMiddleware, (req: AuthRequest, res: Response) => {

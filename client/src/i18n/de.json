@@ -152,6 +152,8 @@
       "themeNight": "Nacht",
       "vacationMode": "Urlaubsmodus",
       "vacationDesc": "Alle Aufgabenerinnerungen während Ihrer Abwesenheit pausieren",
+      "vacationSince": "Im Urlaub seit",
+      "vacationReturnDate": "Rückkehrdatum",
       "registrationEnabled": "Neue Registrierungen erlauben",
       "registrationEnabledDesc": "Wenn deaktiviert, können keine neuen Konten über die Registrierungsseite erstellt werden.",
       "adminRequired": "Ein Admin-Elternteil ist erforderlich, um Einstellungen zu ändern.",

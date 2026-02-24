@@ -2,12 +2,14 @@ import db from '../database';
 import { buildAchievements } from './achievements';
 import { isNotificationTypeEnabled, sendTelegramMessage } from './notifications';
 import { calculateHealth } from './health';
+import { getGlobalVacation } from './adminHelpers';
 
 function getUserAchievementStats(userId: number) {
   const user = db.prepare(
-    'SELECT id, displayName, coins, currentStreak, isVacationMode, vacationStartDate FROM users WHERE id = ?'
+    'SELECT id, displayName, coins, currentStreak FROM users WHERE id = ?'
   ).get(userId) as any;
   if (!user) return null;
+  const vacation = getGlobalVacation();
 
   const completionsRow = db.prepare('SELECT COUNT(*) as count FROM task_completions WHERE userId = ?').get(userId) as { count: number };
 
@@ -25,7 +27,7 @@ function getUserAchievementStats(userId: number) {
     const forAvg = nonSeasonal.length > 0 ? nonSeasonal : tasks;
     const totalEffort = forAvg.reduce((s, t) => s + t.effort, 0);
     const health = totalEffort > 0
-      ? Math.round(forAvg.reduce((s, t) => s + calculateHealth(t.lastCompletedAt, t.frequencyDays, !!user.isVacationMode, user.vacationStartDate) * t.effort, 0) / totalEffort)
+      ? Math.round(forAvg.reduce((s, t) => s + calculateHealth(t.lastCompletedAt, t.frequencyDays, vacation.isVacation, vacation.startDate) * t.effort, 0) / totalEffort)
       : 100;
     if (health >= 70) roomsClean++;
   }

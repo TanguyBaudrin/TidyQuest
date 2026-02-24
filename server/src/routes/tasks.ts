@@ -4,12 +4,12 @@ import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { calculateHealth, getCoinsForEffort } from '../utils/health';
 import { suggestTaskIcon } from '../utils/taskIcons';
 import { notifyAchievementUnlocksForUser } from '../utils/achievementNotifications';
-import { ensureAdmin, getCoinsByEffortConfig } from '../utils/adminHelpers';
+import { ensureAdmin, getCoinsByEffortConfig, getGlobalVacation } from '../utils/adminHelpers';
 
 const router = Router();
 router.use(authMiddleware);
 
-function hadDueTaskOnDate(dateIsoDay: string, user: any): boolean {
+function hadDueTaskOnDate(dateIsoDay: string): boolean {
   const endOfDay = new Date(`${dateIsoDay}T23:59:59.999Z`).getTime();
   const tasks = db.prepare('SELECT id, frequencyDays, isSeasonal, lastCompletedAt FROM tasks').all() as Array<{
     id: number; frequencyDays: number; isSeasonal: number; lastCompletedAt: string | null;
@@ -25,7 +25,7 @@ function hadDueTaskOnDate(dateIsoDay: string, user: any): boolean {
       dueTs = new Date(t.lastCompletedAt).getTime() + safeFreq * 86400000;
     }
     if (dueTs <= endOfDay) {
-      const health = calculateHealth(t.lastCompletedAt, safeFreq, !!user.isVacationMode, user.vacationStartDate);
+      const health = calculateHealth(t.lastCompletedAt, safeFreq, false, null);
       if (health < 100) return true;
     }
   }
@@ -34,7 +34,7 @@ function hadDueTaskOnDate(dateIsoDay: string, user: any): boolean {
 
 // List tasks for a room
 router.get('/rooms/:roomId/tasks', (req: AuthRequest, res: Response) => {
-  const user = db.prepare('SELECT isVacationMode, vacationStartDate FROM users WHERE id = ?').get(req.userId) as any;
+  const vacation = getGlobalVacation();
   const room = db.prepare('SELECT assignedUserId FROM rooms WHERE id = ?').get(req.params.roomId) as any;
   const tasks = db.prepare('SELECT * FROM tasks WHERE roomId = ?').all(req.params.roomId) as any[];
   const now = new Date().toISOString();
@@ -102,7 +102,7 @@ router.get('/rooms/:roomId/tasks', (req: AuthRequest, res: Response) => {
       completedTodayBy: completedTodayByTask.get(t.id) || null,
       assignmentMode: mode,
       sharedCompletions: (mode === 'shared' || mode === 'custom') ? (sharedCompletionsByTask.get(t.id) || []) : undefined,
-      health: calculateHealth(t.lastCompletedAt, t.frequencyDays, !!user.isVacationMode, user.vacationStartDate),
+      health: calculateHealth(t.lastCompletedAt, t.frequencyDays, vacation.isVacation, vacation.startDate),
     };
   });
 
@@ -357,8 +357,9 @@ router.post('/tasks/:id/complete', (req: AuthRequest, res: Response) => {
   // Update streak for effective user
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(effectiveUserId) as any;
   const today = new Date().toISOString().slice(0, 10);
+  const streakVacation = getGlobalVacation();
 
-  if (user.lastActiveDate !== today) {
+  if (!streakVacation.isVacation && user.lastActiveDate !== today) {
     const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
     let keepGapWithoutPenalty = false;
     if (user.lastActiveDate && user.lastActiveDate < yesterday) {
@@ -367,7 +368,7 @@ router.post('/tasks/:id/complete', (req: AuthRequest, res: Response) => {
       const end = new Date(`${yesterday}T00:00:00.000Z`);
       for (let d = new Date(start.getTime() + 86400000); d <= end; d = new Date(d.getTime() + 86400000)) {
         const day = d.toISOString().slice(0, 10);
-        if (hadDueTaskOnDate(day, user)) {
+        if (hadDueTaskOnDate(day)) {
           keepGapWithoutPenalty = false;
           break;
         }

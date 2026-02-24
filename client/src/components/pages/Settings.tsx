@@ -24,10 +24,17 @@ interface FamilyUser {
   goalEndAt?: string | null;
 }
 
+interface VacationConfig {
+  vacationMode: boolean;
+  vacationStartDate: string | null;
+  vacationEndDate: string | null;
+}
+
 interface SettingsProps {
   user: User;
   family: FamilyUser[];
-  onToggleVacation: (enabled: boolean) => void;
+  vacationConfig?: VacationConfig;
+  onUpdateVacation?: (data: { vacationMode?: boolean; vacationEndDate?: string | null }) => Promise<void>;
   onUpdateRole: (userId: number, role: 'admin' | 'member' | 'child') => void;
   onAddMember: (data: { username: string; password: string; displayName: string; role: 'child' }) => Promise<void>;
   onDeleteUser: (userId: number) => Promise<void>;
@@ -48,7 +55,8 @@ const COLORS = ['#F97316', '#9B72CF', '#4AABDE', '#5CB85C', '#D4A017', '#E25A5A'
 export function Settings({
   user,
   family,
-  onToggleVacation,
+  vacationConfig,
+  onUpdateVacation,
   onUpdateRole,
   onAddMember,
   onDeleteUser,
@@ -470,17 +478,43 @@ export function Settings({
             <option value="night">{t('settings.themeNight')}</option>
           </select>
         </div>
-        {user.role !== 'child' && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0' }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <circle cx="10" cy="8" r="4" stroke="#B0A090" strokeWidth="1.5" fill="none" />
-            <path d="M5 17L6.5 13H13.5L15 17" stroke="#B0A090" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warm-text)' }}>{t('settings.vacationMode')}</div>
-            <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600 }}>{t('settings.vacationDesc')}</div>
+        {isAdmin && (
+        <div style={{ padding: '14px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="8" r="4" stroke="#B0A090" strokeWidth="1.5" fill="none" />
+              <path d="M5 17L6.5 13H13.5L15 17" stroke="#B0A090" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warm-text)' }}>{t('settings.vacationMode')}</div>
+              <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600 }}>{t('settings.vacationDesc')}</div>
+              {vacationConfig?.vacationMode && vacationConfig.vacationStartDate && (
+                <div style={{ fontSize: 11, color: 'var(--warm-accent)', marginTop: 2 }}>
+                  {t('settings.vacationSince')} {new Date(vacationConfig.vacationStartDate).toLocaleDateString(locale)}
+                </div>
+              )}
+            </div>
+            <Toggle
+              checked={!!vacationConfig?.vacationMode}
+              onChange={async (val) => { await onUpdateVacation?.({ vacationMode: val }); }}
+            />
           </div>
-          <Toggle checked={!!user.isVacationMode} onChange={isAdmin ? onToggleVacation : () => {}} />
+          {vacationConfig?.vacationMode && (
+            <div style={{ marginTop: 10, paddingLeft: 34, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--warm-text-light)' }}>
+                {t('settings.vacationReturnDate')}
+              </label>
+              <input
+                type="date"
+                value={vacationConfig.vacationEndDate ? vacationConfig.vacationEndDate.slice(0, 10) : ''}
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={async (e) => {
+                  await onUpdateVacation?.({ vacationEndDate: e.target.value || null });
+                }}
+                style={{ fontSize: 13, padding: '4px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)', background: 'var(--warm-bg)', color: 'var(--warm-text)' }}
+              />
+            </div>
+          )}
         </div>
         )}
         {isAdmin && (

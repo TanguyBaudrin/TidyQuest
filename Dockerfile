@@ -20,11 +20,11 @@ COPY --from=server-build /app/server/dist ./server/dist
 COPY --from=frontend-build /app/client/dist ./client/dist
 RUN mkdir -p /app/data
 
-# Create non-root user and set permissions
-RUN addgroup -g 1000 -S appgroup && \
-    adduser -S appuser -u 1000 -G appgroup && \
-    chown -R appuser:appgroup /app
+# Ensure /app is owned by node user (uid=1000, gid=1000)
+RUN chown -R node:node /app
 
-USER appuser
+# Use existing node user from node:22-alpine image
+# node:22-alpine comes with uid=1000, gid=1000 (node user/group)
+USER node
 EXPOSE 3000
 CMD ["node", "server/dist/index.js"]

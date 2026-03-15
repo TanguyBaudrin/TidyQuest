@@ -5,11 +5,30 @@ import { suggestTaskIcon } from './utils/taskIcons';
 
 const DB_PATH = path.join(__dirname, '..', '..', 'data', 'tidyquest.db');
 
-const db = new Database(DB_PATH);
+export function createDatabase(dbPath: string = DB_PATH): InstanceType<typeof Database> {
+  const instance = new Database(dbPath);
+  instance.pragma('journal_mode = WAL');
+  instance.pragma('foreign_keys = ON');
+  return instance;
+}
 
-// Enable WAL mode for better concurrent read performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+let _db: InstanceType<typeof Database> = createDatabase();
+
+export function setDatabase(instance: InstanceType<typeof Database>) {
+  _db = instance;
+}
+
+// Proxy so that route files importing `db` always reach the current _db instance.
+// This allows tests to swap the DB via setDatabase() without module mocking.
+const db = new Proxy({} as InstanceType<typeof Database>, {
+  get(_target, prop: string | symbol) {
+    const value = (_db as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(_db);
+    }
+    return value;
+  },
+});
 
 export function initDatabase() {
   db.exec(`

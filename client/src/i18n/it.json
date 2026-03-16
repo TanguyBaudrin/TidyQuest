@@ -410,7 +410,10 @@
       "nextDue": "Prossima scadenza",
       "overdue": "In ritardo",
       "today": "Oggi",
-      "tomorrow": "Domani"
+      "tomorrow": "Domani",
+      "inMinutes": "tra {m}min",
+      "inHours": "tra {h}h",
+      "inHoursMinutes": "tra {h}h {m}min"
     },
     "avatars": {
       "cat": "Gatto",

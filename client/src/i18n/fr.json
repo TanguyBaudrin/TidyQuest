@@ -410,7 +410,10 @@
       "nextDue": "Prochaine échéance",
       "overdue": "En retard",
       "today": "Aujourd'hui",
-      "tomorrow": "Demain"
+      "tomorrow": "Demain",
+      "inMinutes": "dans {m}min",
+      "inHours": "dans {h}h",
+      "inHoursMinutes": "dans {h}h {m}min"
     },
     "avatars": {
       "cat": "Chat",

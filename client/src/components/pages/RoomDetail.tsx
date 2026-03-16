@@ -52,12 +52,30 @@ function getNextDueDate(lastCompletedAt: string | null, frequencyDays: number): 
 function formatNextDue(lastCompletedAt: string | null, frequencyDays: number, t: (k: string) => string, language?: string): { text: string; color: string } {
   const nextDue = getNextDueDate(lastCompletedAt, frequencyDays);
   const now = new Date();
+
+  // Time-based countdown for tasks due within the next 24 hours
+  const diffMs = nextDue.getTime() - now.getTime();
+  if (diffMs < 0) return { text: t('roomDetail.overdue'), color: 'var(--health-red)' };
+
+  const diffMinutes = Math.ceil(diffMs / (60 * 1000));
+  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+  const remainingMinutes = Math.ceil((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+
+  if (diffMinutes < 60) {
+    return { text: t('roomDetail.inMinutes').replace('{m}', `${Math.max(1, diffMinutes)}`), color: 'var(--health-yellow)' };
+  }
+  if (diffHours < 24) {
+    const text = remainingMinutes > 0
+      ? t('roomDetail.inHoursMinutes').replace('{h}', `${diffHours}`).replace('{m}', `${remainingMinutes}`)
+      : t('roomDetail.inHours').replace('{h}', `${diffHours}`);
+    return { text, color: 'var(--health-yellow)' };
+  }
+
+  // Day-based display for tasks due further out
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dueStart = new Date(nextDue.getFullYear(), nextDue.getMonth(), nextDue.getDate());
   const diffDays = Math.round((dueStart.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000));
-  if (diffDays < 0) return { text: t('roomDetail.overdue'), color: 'var(--health-red)' };
-  if (diffDays === 0) return { text: t('roomDetail.today'), color: 'var(--health-yellow)' };
-  if (diffDays === 1) return { text: t('roomDetail.tomorrow'), color: 'var(--health-yellow)' };
+  if (diffDays <= 1) return { text: t('roomDetail.tomorrow'), color: 'var(--health-yellow)' };
   const localeMap: Record<string, string> = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', it: 'it-IT' };
   const locale = localeMap[language || 'en'] || 'en-US';
   const text = nextDue.toLocaleDateString(locale, { day: 'numeric', month: 'short' });

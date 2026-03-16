@@ -410,7 +410,10 @@
       "nextDue": "Próxima fecha",
       "overdue": "Atrasada",
       "today": "Hoy",
-      "tomorrow": "Mañana"
+      "tomorrow": "Mañana",
+      "inMinutes": "en {m}min",
+      "inHours": "en {h}h",
+      "inHoursMinutes": "en {h}h {m}min"
     },
     "avatars": {
       "cat": "Gato",

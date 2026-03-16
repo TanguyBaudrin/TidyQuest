@@ -410,7 +410,10 @@
       "nextDue": "Nächste Fälligkeit",
       "overdue": "Überfällig",
       "today": "Heute",
-      "tomorrow": "Morgen"
+      "tomorrow": "Morgen",
+      "inMinutes": "in {m}Min",
+      "inHours": "in {h}Std",
+      "inHoursMinutes": "in {h}Std {m}Min"
     },
     "avatars": {
       "cat": "Katze",

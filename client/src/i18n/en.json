@@ -410,7 +410,10 @@
       "nextDue": "Next Due",
       "overdue": "Overdue",
       "today": "Today",
-      "tomorrow": "Tomorrow"
+      "tomorrow": "Tomorrow",
+      "inMinutes": "in {m}m",
+      "inHours": "in {h}h",
+      "inHoursMinutes": "in {h}h {m}m"
     },
     "avatars": {
       "cat": "Cat",

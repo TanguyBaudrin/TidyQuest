@@ -30,6 +30,14 @@ This beta release includes 9 new features, a complete UI redesign, security hard
 - Ideal for couples who want task tracking without competition
 - Dashboard, rewards, and leaderboard sections hidden when disabled
 
+### Unified Notification Settings
+- Notifications section redesigned with a **master toggle** and hierarchical layout
+- When enabled: notification time picker, notification type checkboxes (task due, reward requests, achievements)
+- **Telegram** and **ntfy** are now sub-toggles under the master toggle
+- Each provider expands its own configuration fields and Save/Test buttons
+- Validation: at least one provider must be enabled when notifications are on
+- Notification types are always visible regardless of gamification mode
+
 ### ntfy Notifications
 - Added **ntfy** as a notification provider alongside Telegram
 - Configure via Settings with server URL and topic
@@ -45,6 +53,13 @@ This beta release includes 9 new features, a complete UI redesign, security hard
 
 ### Admin Edit Predefined Rewards
 - Admins can now customize coin costs of preset rewards
+
+### Version Display
+- Software version now shown in Settings page (General card)
+
+### Integration Tests & CI
+- API integration test suite using Vitest + Supertest
+- GitHub Actions CI workflow runs tests on push and pull requests
 
 ### Docker Security
 - Container now runs as non-root user (`node`) by default
@@ -72,7 +87,9 @@ This beta release includes 9 new features, a complete UI redesign, security hard
 - **#28**: Task assignment label correctly says "Assign task" instead of "Assign room"
 - **#34**: Dates use browser locale for formatting (DD/MM/YYYY or MM/DD/YYYY based on user's OS)
 - **#36**: Deleting a task now refreshes dashboard data (no more stale values)
-- **#23**: Task completion now enforces frequency cooldown — tasks can no longer be completed again before they are due (server-side 409 + client-side button disabled with next-due date)
+- **#23**: Task completion now enforces frequency cooldown — tasks can no longer be completed again before they are due (server-side 409 + client-side button disabled with countdown timer showing hours/minutes remaining)
+- **#42**: Renaming a task now correctly clears the `translationKey`, so the custom name is displayed instead of the old translation
+- **#43**: Week and day boundaries now use local timezone (via `TZ` env var) instead of UTC — fixes week resetting at wrong time for non-UTC users
 - **#31**: All 44+ hardcoded hex colors across 13 component files replaced with CSS custom properties — night theme now has proper contrast throughout (status badges, health badges, icons, forms, history, rewards)
 - **#37**: Old avatar files are deleted from disk when uploading a new one
 - **Docker**: Fixed `SQLITE_CANTOPEN` / `SQLITE_READONLY` crash on first run with volume mounts
@@ -91,6 +108,7 @@ None. This release is backward-compatible with v0.3.0 data.
 |----------|----------|-------------|
 | `JWT_SECRET` | **Yes** (production) | Secret key for JWT token signing. If not set, a random secret is generated at startup (tokens won't survive restarts) |
 | `NODE_ENV` | Recommended | Set to `production` for production deployments |
+| `TZ` | Recommended | Timezone for day/week boundary calculations (e.g. `Europe/Zurich`). Defaults to UTC if not set |
 | `ADMIN_RESET_PASSWORD` | No | One-shot admin password recovery (cleared after use) |
 
 ---
@@ -99,7 +117,7 @@ None. This release is backward-compatible with v0.3.0 data.
 
 - Beta release: not yet published to Docker Hub
 - The `vacationEndDate` per-user is stored but not yet used for auto-disabling vacation
-- ntfy and Telegram cannot both be active simultaneously
+- ~~ntfy and Telegram cannot both be active simultaneously~~ (fixed: both can now be enabled together)
 
 ---
 
@@ -107,9 +125,10 @@ None. This release is backward-compatible with v0.3.0 data.
 
 1. Switch to the `release/beta` branch
 2. Set `JWT_SECRET` environment variable for persistent sessions
-3. Rebuild and restart the container
-4. Database migrations run automatically (new columns added idempotently)
-5. No manual data migration required
+3. Set `TZ` environment variable to your local timezone (e.g. `-e TZ=Europe/Zurich`)
+4. Rebuild and restart the container
+5. Database migrations run automatically (new columns added idempotently)
+6. No manual data migration required
 
 ---
 

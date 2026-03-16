@@ -124,7 +124,8 @@ export function Settings({
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
   const [strictModeEnabled, setStrictModeEnabled] = useState(false);
   const [pendingCompletions, setPendingCompletions] = useState<PendingCompletion[]>([]);
-  const [notifEnabled, setNotifEnabled] = useState(false);
+  const [notifMasterEnabled, setNotifMasterEnabled] = useState(false);
+  const [telegramEnabled, setTelegramEnabled] = useState(false);
   const [notifChatId, setNotifChatId] = useState('');
   const [notifToken, setNotifToken] = useState('');
   const [notifTime, setNotifTime] = useState('09:00');
@@ -136,7 +137,6 @@ export function Settings({
   const [ntfyTopic, setNtfyTopic] = useState('');
   const [ntfyToken, setNtfyToken] = useState('');
   const [ntfyHasToken, setNtfyHasToken] = useState(false);
-  const [ntfyMsg, setNtfyMsg] = useState('');
 
   const localeMap: Record<string, string> = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', it: 'it-IT' };
   const locale = localeMap[user.language || 'en'] || 'en-US';
@@ -206,7 +206,8 @@ export function Settings({
     if (!isAdmin) return;
     api.getNotificationsConfig()
       .then((cfg) => {
-        setNotifEnabled(!!cfg.enabled);
+        setNotifMasterEnabled(!!cfg.notificationsEnabled);
+        setTelegramEnabled(!!cfg.telegramEnabled);
         setNotifChatId(cfg.chatId || '');
         setNotifTime(cfg.notificationTime || '09:00');
         setNotifTypes(cfg.notificationTypes || { taskDue: true, rewardRequest: true, achievementUnlocked: true });
@@ -391,17 +392,22 @@ export function Settings({
   const saveNotifications = async () => {
     setNotifMsg('');
     try {
-      if (notifEnabled && !notifChatId.trim()) {
+      if (notifMasterEnabled && !telegramEnabled && !ntfyEnabled) {
+        setNotifMsg(t('settings.providerRequired'));
+        return;
+      }
+      if (notifMasterEnabled && telegramEnabled && !notifChatId.trim()) {
         setNotifMsg(t('settings.telegramChatIdRequired'));
         return;
       }
-      if (notifEnabled && !notifHasToken && !notifToken.trim()) {
+      if (notifMasterEnabled && telegramEnabled && !notifHasToken && !notifToken.trim()) {
         setNotifMsg(t('settings.telegramTokenRequired'));
         return;
       }
 
       const payload: Record<string, any> = {
-        enabled: notifEnabled,
+        notificationsEnabled: notifMasterEnabled,
+        telegramEnabled,
         chatId: notifChatId.trim(),
         notificationTime: notifTime,
         notificationTypes: notifTypes,
@@ -412,7 +418,8 @@ export function Settings({
       if (notifToken.trim()) payload.botToken = notifToken.trim();
       if (ntfyToken.trim()) payload.ntfyToken = ntfyToken.trim();
       const next = await api.updateNotificationsConfig(payload);
-      setNotifEnabled(next.enabled);
+      setNotifMasterEnabled(!!next.notificationsEnabled);
+      setTelegramEnabled(!!next.telegramEnabled);
       setNotifChatId(next.chatId || '');
       setNotifTime(next.notificationTime || '09:00');
       setNotifTypes(next.notificationTypes || { taskDue: true, rewardRequest: true, achievementUnlocked: true });
@@ -429,16 +436,32 @@ export function Settings({
     }
   };
 
-  const testNotifications = async () => {
+  const testTelegram = async () => {
     setNotifMsg('');
     try {
       await api.sendNotificationsTest({
+        provider: 'telegram',
         chatId: notifChatId.trim() || undefined,
         botToken: notifToken.trim() || undefined,
       });
       setNotifMsg(t('settings.notificationsTestSent'));
     } catch (err: any) {
       setNotifMsg(err?.message || t('settings.notificationsTestFailed'));
+    }
+  };
+
+  const testNtfy = async () => {
+    setNotifMsg('');
+    try {
+      await api.sendNotificationsTest({
+        provider: 'ntfy',
+        ntfyServerUrl: ntfyServerUrl.trim() || undefined,
+        ntfyTopic: ntfyTopic.trim() || undefined,
+        ntfyToken: ntfyToken.trim() || undefined,
+      });
+      setNotifMsg(t('settings.ntfyTestSent'));
+    } catch (err: any) {
+      setNotifMsg(err?.message || t('settings.ntfyTestFailed'));
     }
   };
 
@@ -456,162 +479,98 @@ export function Settings({
       <div className="tq-card tq-card-padded">
         <h3 className="tq-card-title">{t('settings.general')}</h3>
         {user.role !== 'child' && (<>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: isAdmin ? 'none' : '1px solid var(--warm-border)' }}>
+        {/* Master Notifications toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: (isAdmin && notifMasterEnabled) ? 'none' : '1px solid var(--warm-border)' }}>
           <BellIcon />
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warm-text)' }}>{t('settings.notifications')}</div>
             <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600 }}>{t('settings.notificationsDesc')}</div>
           </div>
-          <Toggle checked={notifEnabled} onChange={isAdmin ? setNotifEnabled : () => {}} />
+          <Toggle checked={notifMasterEnabled} onChange={isAdmin ? setNotifMasterEnabled : () => {}} />
         </div>
         {isAdmin && (
-          <div style={{ display: 'grid', gap: 8, marginTop: 10, marginBottom: 8, padding: 10, border: '1px solid var(--warm-border)', borderRadius: 10 }}>
-            {notifEnabled ? (
+          <div style={{ display: 'grid', gap: 8, marginTop: notifMasterEnabled ? 10 : 0, marginBottom: 8, padding: notifMasterEnabled ? 10 : 0, border: notifMasterEnabled ? '1px solid var(--warm-border)' : 'none', borderRadius: 10 }}>
+            {notifMasterEnabled ? (
               <>
+                {/* Notification time */}
                 <div style={{ display: 'grid', gap: 4 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.notificationTime')}</label>
-                  <input
-                    type="time"
-                    className="tq-input"
-                    value={notifTime}
-                    onChange={(e) => setNotifTime(e.target.value || '09:00')}
-                  />
+                  <input type="time" className="tq-input" value={notifTime} onChange={(e) => setNotifTime(e.target.value || '09:00')} />
                 </div>
-                <input
-                  className="tq-input"
-                  value={notifChatId}
-                  onChange={(e) => setNotifChatId(e.target.value)}
-                  placeholder={t('settings.telegramChatId')}
-                />
-                <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{t('settings.telegramChatIdHint')}</div>
-                <input
-                  type="password"
-                  className="tq-input"
-                  value={notifToken}
-                  onChange={(e) => setNotifToken(e.target.value)}
-                  placeholder={notifHasToken ? t('settings.telegramTokenConfigured') : t('settings.telegramToken')}
-                />
-                <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{t('settings.telegramTokenHint')}</div>
+                {/* Notification types */}
                 <div style={{ display: 'grid', gap: 6, marginTop: 2 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>
-                    <input
-                      type="checkbox"
-                      checked={notifTypes.taskDue}
-                      onChange={(e) => setNotifTypes((prev) => ({ ...prev, taskDue: e.target.checked }))}
-                      style={{ marginRight: 6 }}
-                    />
+                    <input type="checkbox" checked={notifTypes.taskDue} onChange={(e) => setNotifTypes((prev) => ({ ...prev, taskDue: e.target.checked }))} style={{ marginRight: 6 }} />
                     {t('settings.notificationTypeTaskDue')}
                   </label>
-                  {gamificationEnabled && (
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>
-                    <input
-                      type="checkbox"
-                      checked={notifTypes.rewardRequest}
-                      onChange={(e) => setNotifTypes((prev) => ({ ...prev, rewardRequest: e.target.checked }))}
-                      style={{ marginRight: 6 }}
-                    />
+                    <input type="checkbox" checked={notifTypes.rewardRequest} onChange={(e) => setNotifTypes((prev) => ({ ...prev, rewardRequest: e.target.checked }))} style={{ marginRight: 6 }} />
                     {t('settings.notificationTypeRewardRequest')}
                   </label>
-                  )}
-                  {gamificationEnabled && (
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>
-                    <input
-                      type="checkbox"
-                      checked={notifTypes.achievementUnlocked}
-                      onChange={(e) => setNotifTypes((prev) => ({ ...prev, achievementUnlocked: e.target.checked }))}
-                      style={{ marginRight: 6 }}
-                    />
+                    <input type="checkbox" checked={notifTypes.achievementUnlocked} onChange={(e) => setNotifTypes((prev) => ({ ...prev, achievementUnlocked: e.target.checked }))} style={{ marginRight: 6 }} />
                     {t('settings.notificationTypeAchievementUnlocked')}
                   </label>
+                </div>
+
+                {/* Telegram sub-toggle */}
+                <div style={{ marginTop: 8, padding: 10, border: '1px solid var(--warm-border)', borderRadius: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M21.2 4.4L2.4 11.1c-.6.2-.6.7 0 .9l4.8 1.5 1.8 5.8c.2.5.7.5 1 .2l2.6-2.1 5.1 3.7c.5.4 1.1.1 1.2-.5L22.2 5.4c.2-.8-.4-1.3-1-1z" stroke="var(--warm-text-light)" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--warm-text)' }}>Telegram</div>
+                    <Toggle checked={telegramEnabled} onChange={setTelegramEnabled} />
+                  </div>
+                  {telegramEnabled && (
+                    <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                      <input className="tq-input" value={notifChatId} onChange={(e) => setNotifChatId(e.target.value)} placeholder={t('settings.telegramChatId')} />
+                      <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{t('settings.telegramChatIdHint')}</div>
+                      <input type="password" className="tq-input" value={notifToken} onChange={(e) => setNotifToken(e.target.value)} placeholder={notifHasToken ? t('settings.telegramTokenConfigured') : t('settings.telegramToken')} />
+                      <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{t('settings.telegramTokenHint')}</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={saveNotifications}>{t('common.save')}</button>
+                        <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={testTelegram}>{t('settings.sendTestNotification')}</button>
+                      </div>
+                    </div>
                   )}
                 </div>
+
+                {/* ntfy sub-toggle */}
+                <div style={{ padding: 10, border: '1px solid var(--warm-border)', borderRadius: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2a7 7 0 0 0-7 7v3l-1.5 2h17L17 12V9a7 7 0 0 0-7-7z" stroke="var(--warm-text-light)" strokeWidth="1.5" fill="none"/><path d="M8 16a2 2 0 0 0 4 0" stroke="var(--warm-text-light)" strokeWidth="1.5" fill="none"/></svg>
+                    <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--warm-text)' }}>ntfy</div>
+                    <Toggle checked={ntfyEnabled} onChange={setNtfyEnabled} />
+                  </div>
+                  {ntfyEnabled && (
+                    <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+                      <div style={{ display: 'grid', gap: 4 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.ntfyServerUrl')}</label>
+                        <input className="tq-input" value={ntfyServerUrl} onChange={(e) => setNtfyServerUrl(e.target.value)} placeholder="https://ntfy.sh" />
+                      </div>
+                      <div style={{ display: 'grid', gap: 4 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.ntfyTopic')}</label>
+                        <input className="tq-input" value={ntfyTopic} onChange={(e) => setNtfyTopic(e.target.value)} placeholder={t('settings.ntfyTopicPlaceholder')} />
+                      </div>
+                      <div style={{ display: 'grid', gap: 4 }}>
+                        <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.ntfyToken')}</label>
+                        <input type="password" className="tq-input" value={ntfyToken} onChange={(e) => setNtfyToken(e.target.value)} placeholder={ntfyHasToken ? t('settings.ntfyTokenConfigured') : t('settings.ntfyTokenPlaceholder')} />
+                        <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{t('settings.ntfyTokenHint')}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={saveNotifications}>{t('common.save')}</button>
+                        <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={testNtfy}>{t('settings.sendTestNotification')}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {notifMsg && <div style={{ fontSize: 11, color: notifMsg.includes('✓') || notifMsg.includes('saved') || notifMsg.includes('sent') || notifMsg.includes('enregistr') || notifMsg.includes('envoy') ? 'var(--health-green)' : 'var(--warm-text-muted)', fontWeight: 700 }}>{notifMsg}</div>}
               </>
             ) : (
               <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>
                 {t('settings.notificationsDisabledHint')}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {notifEnabled && (
-                <>
-                  <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={saveNotifications}>
-                    {t('common.save')}
-                  </button>
-                  <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={testNotifications}>
-                    {t('settings.sendTestNotification')}
-                  </button>
-                </>
-              )}
-            </div>
-            {notifMsg && <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{notifMsg}</div>}
-          </div>
-        )}
-        {isAdmin && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderBottom: '1px solid var(--warm-border)' }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 2a7 7 0 0 0-7 7v3l-1.5 2h17L17 12V9a7 7 0 0 0-7-7z" stroke="var(--warm-text-light)" strokeWidth="1.5" fill="none"/><path d="M8 16a2 2 0 0 0 4 0" stroke="var(--warm-text-light)" strokeWidth="1.5" fill="none"/></svg>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warm-text)' }}>{t('settings.ntfyTitle')}</div>
-            <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600 }}>{t('settings.ntfyDesc')}</div>
-          </div>
-          <Toggle checked={ntfyEnabled} onChange={setNtfyEnabled} />
-        </div>
-        )}
-        {isAdmin && (
-          <div style={{ display: 'grid', gap: 8, marginTop: 10, marginBottom: 8, padding: 10, border: '1px solid var(--warm-border)', borderRadius: 10 }}>
-            {ntfyEnabled ? (
-              <>
-                <div style={{ display: 'grid', gap: 4 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.ntfyServerUrl')}</label>
-                  <input
-                    value={ntfyServerUrl}
-                    onChange={(e) => setNtfyServerUrl(e.target.value)}
-                    placeholder="https://ntfy.sh"
-                    style={{ padding: '7px 10px', borderRadius: 10, border: '1.5px solid var(--warm-border)', fontFamily: 'Nunito' }}
-                  />
-                </div>
-                <div style={{ display: 'grid', gap: 4 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.ntfyTopic')}</label>
-                  <input
-                    value={ntfyTopic}
-                    onChange={(e) => setNtfyTopic(e.target.value)}
-                    placeholder={t('settings.ntfyTopicPlaceholder')}
-                    style={{ padding: '7px 10px', borderRadius: 10, border: '1.5px solid var(--warm-border)', fontFamily: 'Nunito' }}
-                  />
-                </div>
-                <div style={{ display: 'grid', gap: 4 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)' }}>{t('settings.ntfyToken')}</label>
-                  <input
-                    type="password"
-                    value={ntfyToken}
-                    onChange={(e) => setNtfyToken(e.target.value)}
-                    placeholder={ntfyHasToken ? t('settings.ntfyTokenConfigured') : t('settings.ntfyTokenPlaceholder')}
-                    style={{ padding: '7px 10px', borderRadius: 10, border: '1.5px solid var(--warm-border)', fontFamily: 'Nunito' }}
-                  />
-                  <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{t('settings.ntfyTokenHint')}</div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button className="tq-btn tq-btn-secondary" onClick={saveNotifications} style={{ padding: '6px 10px', fontSize: 11 }}>
-                    {t('common.save')}
-                  </button>
-                  <button className="tq-btn tq-btn-secondary" onClick={async () => {
-                    setNtfyMsg('');
-                    try {
-                      await api.sendNotificationsTest({ provider: 'ntfy', ntfyServerUrl: ntfyServerUrl.trim() || undefined, ntfyTopic: ntfyTopic.trim() || undefined, ntfyToken: ntfyToken.trim() || undefined });
-                      setNtfyMsg(t('settings.ntfyTestSent'));
-                    } catch (err: any) {
-                      setNtfyMsg(err?.message || t('settings.ntfyTestFailed'));
-                    }
-                  }} style={{ padding: '6px 10px', fontSize: 11 }}>
-                    {t('settings.sendTestNotification')}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>
-                {t('settings.ntfyDisabledHint')}
-              </div>
-            )}
-            {ntfyMsg && <div style={{ fontSize: 11, color: 'var(--warm-text-muted)', fontWeight: 700 }}>{ntfyMsg}</div>}
           </div>
         )}
         </>)}

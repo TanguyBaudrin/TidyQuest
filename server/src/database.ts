@@ -358,33 +358,40 @@ export function initDatabase() {
   db.prepare(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('coinsByEffort', ?)"
   ).run(JSON.stringify({ 1: 5, 2: 10, 3: 15, 4: 20, 5: 25 }));
+  // Notification settings — master toggle + per-provider sub-toggles
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notificationsEnabled', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notificationTime', '09:00')").run();
   db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramEnabled', '0')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramBotToken', '')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramChatId', '')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramNotificationTime', '09:00')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramNotificationTypes', ?)"
+    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notificationTypes', ?)"
   ).run(JSON.stringify({ taskDue: true, rewardRequest: true, achievementUnlocked: true }));
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyEnabled', '0')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyServerUrl', 'https://ntfy.sh')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyTopic', '')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyToken', '')"
-  ).run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramEnabled', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramBotToken', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramChatId', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyEnabled', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyServerUrl', 'https://ntfy.sh')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyTopic', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyToken', '')").run();
+
+  // One-shot migration: promote old telegram/ntfy settings to new master toggle
+  const notifMigrated = (db.prepare("SELECT value FROM app_settings WHERE key = 'notifMasterMigrated_v1'").get() as any)?.value;
+  if (!notifMigrated) {
+    const oldTgEnabled = (db.prepare("SELECT value FROM app_settings WHERE key = 'telegramEnabled'").get() as any)?.value === '1';
+    const oldNtfyEnabled = (db.prepare("SELECT value FROM app_settings WHERE key = 'ntfyEnabled'").get() as any)?.value === '1';
+    if (oldTgEnabled || oldNtfyEnabled) {
+      db.prepare("UPDATE app_settings SET value = '1' WHERE key = 'notificationsEnabled'").run();
+    }
+    // Migrate telegramNotificationTime → notificationTime
+    const oldTime = (db.prepare("SELECT value FROM app_settings WHERE key = 'telegramNotificationTime'").get() as any)?.value;
+    if (oldTime) {
+      db.prepare("UPDATE app_settings SET value = ? WHERE key = 'notificationTime'").run(oldTime);
+    }
+    // Migrate telegramNotificationTypes → notificationTypes
+    const oldTypes = (db.prepare("SELECT value FROM app_settings WHERE key = 'telegramNotificationTypes'").get() as any)?.value;
+    if (oldTypes) {
+      db.prepare("UPDATE app_settings SET value = ? WHERE key = 'notificationTypes'").run(oldTypes);
+    }
+    db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notifMasterMigrated_v1', '1')").run();
+  }
   db.prepare(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('registrationEnabled', '1')"
   ).run();

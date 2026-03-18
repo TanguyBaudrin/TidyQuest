@@ -251,3 +251,16 @@ export function TrashIcon() {
     </svg>
   );
 }
+export function PointsIcon() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <path
+        d="M11 2L13.5 8H20L14.5 12L16.5 18L11 14.5L5.5 18L7.5 12L2 8H8.5L11 2Z"
+        fill="#A78BFA"
+        stroke="#7C3AED"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}

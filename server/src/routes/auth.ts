@@ -96,18 +96,27 @@ router.post('/login', (req: AuthRequest, res: Response) => {
 
   const token = generateToken(user.id);
   const { passwordHash, ...safeUser } = user;
+  
+  const pointsRow = db.prepare(
+    "SELECT COALESCE(SUM(coinsEarned), 0) as points FROM task_completions WHERE userId = ? AND status = 'approved'"
+  ).get(user.id) as any;
+  safeUser.points = pointsRow?.points ?? 0;
   res.json({ token, user: safeUser });
+
 });
+
 
 router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   const user = db.prepare(
     'SELECT id, username, displayName, role, avatarColor, avatarType, avatarPreset, avatarPhotoUrl, coins, currentStreak, goalCoins, goalStartAt, goalEndAt, lastActiveDate, isVacationMode, language, createdAt FROM users WHERE id = ?'
   ).get(req.userId) as any;
-
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-
+  const pointsRow = db.prepare(
+    "SELECT COALESCE(SUM(coinsEarned), 0) as points FROM task_completions WHERE userId = ? AND status = 'approved'"
+  ).get(req.userId) as any;
+  user.points = pointsRow?.points ?? 0;
   res.json(user);
 });
 

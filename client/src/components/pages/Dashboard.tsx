@@ -106,6 +106,7 @@ interface DashboardProps {
   onNavigateToActivity: () => void;
   onRewardRequestAction: (id: number, status: 'approved' | 'rejected') => void | Promise<void>;
   gamificationEnabled?: boolean;
+  leaderboardPeriod?: 'week' | 'month' | 'quarter' | 'year';
 }
 
 /* ── Component ── */
@@ -121,6 +122,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onNavigateToActivity,
   onRewardRequestAction,
   gamificationEnabled = true,
+  leaderboardPeriod = 'week',
 }) => {
   const { taskName, roomDisplayName, timeAgo, t } = useTranslation(language);
   const { houseHealth, rooms, todaysQuests, nextTasks, myGoal, childrenGoals = [], pendingRewardRequests = [], currentUser, recentActivity } = data;
@@ -649,7 +651,10 @@ const Dashboard: React.FC<DashboardProps> = ({
               margin: '0 0 12px',
             }}
           >
-            {t('leaderboard.thisWeek')}
+            {leaderboardPeriod === 'month' ? t('leaderboard.thisMonth')
+              : leaderboardPeriod === 'quarter' ? t('leaderboard.thisQuarter')
+              : leaderboardPeriod === 'year' ? t('leaderboard.thisYear')
+              : t('leaderboard.thisWeek')}
           </h3>
           {sortedFamily.map((u, i) => (
             <div

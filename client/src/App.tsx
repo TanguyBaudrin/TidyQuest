@@ -322,6 +322,7 @@ function AppContent() {
                   users={familySettings}
                   language={user.language}
                   gamificationEnabled={gamificationEnabled}
+                  leaderboardPeriod={leaderboardPeriod}
                   onCompleteTask={handleCompleteTask}
                   onRefresh={loadDashboard}
                   onNavigateToRoom={(id) => navigate(`/rooms/${id}`)}

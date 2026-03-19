@@ -178,7 +178,7 @@ function AppContent() {
       }
       setConfetti(true);
       refreshUser();
-      await refreshRooms();
+      await Promise.all([refreshRooms(), loadDashboard()]);
       setTimeout(() => setConfetti(false), 2200);
     } catch (err) {
       setConfetti(false);

@@ -71,7 +71,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
       const dueDateTs = t.lastCompletedAt
         ? new Date(t.lastCompletedAt).getTime() + safeFreq * 86400000
         : nowTs;
-      const dueInDays = Math.ceil((dueDateTs - nowTs) / 86400000);
+      const dueInDays = Math.max(0, Math.floor((dueDateTs - nowTs) / 86400000));
       const taskWithHealth = {
         ...t,
         isSeasonal: !!t.isSeasonal,

@@ -314,6 +314,7 @@
       "choresDone": "Chores done",
       "tasksDue": "Tasks due",
       "today": "Today",
+      "tomorrow": "Tomorrow",
       "upcomingDueDates": "Upcoming Due Dates",
       "inDays": "in {days}d",
       "allCaughtUp": "All caught up! No tasks due soon."

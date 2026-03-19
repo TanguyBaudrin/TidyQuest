@@ -314,6 +314,7 @@
       "choresDone": "Tareas hechas",
       "tasksDue": "Tareas pendientes",
       "today": "Hoy",
+      "tomorrow": "Mañana",
       "upcomingDueDates": "Próximas fechas límite",
       "inDays": "en {days}d",
       "allCaughtUp": "¡Todo al día! No hay tareas próximas."

@@ -368,7 +368,11 @@ const Dashboard: React.FC<DashboardProps> = ({
                     </div>
                   </div>
                   <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--warm-streak-subtext)', backgroundColor: 'var(--warm-accent-light)', border: '1px solid var(--warm-streak-border)', borderRadius: 999, padding: '3px 8px' }}>
-                    {t('calendar.inDays').replace('{days}', `${q.dueInDays || 0}`)}
+                    {(q.dueInDays ?? 0) <= 0
+                      ? t('calendar.today')
+                      : (q.dueInDays === 1)
+                        ? t('calendar.tomorrow')
+                        : t('calendar.inDays').replace('{days}', `${q.dueInDays}`)}
                   </div>
                 </div>
               );

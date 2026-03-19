@@ -314,6 +314,7 @@
       "choresDone": "Faccende completate",
       "tasksDue": "Attività in scadenza",
       "today": "Oggi",
+      "tomorrow": "Domani",
       "upcomingDueDates": "Prossime scadenze",
       "inDays": "tra {days}g",
       "allCaughtUp": "Tutto sotto controllo! Nessuna attività in scadenza a breve."

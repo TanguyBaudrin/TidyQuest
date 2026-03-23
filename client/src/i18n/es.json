@@ -319,6 +319,11 @@
       "inDays": "en {days}d",
       "allCaughtUp": "¡Todo al día! No hay tareas próximas."
     },
+    "period": {
+      "week": "Semana",
+      "month": "Mes",
+      "year": "Año"
+    },
     "leaderboard": {
       "thisWeek": "Esta semana",
       "thisMonth": "Este mes",

@@ -319,6 +319,11 @@
       "inDays": "dans {days}j",
       "allCaughtUp": "Tout est à jour ! Aucune tâche imminente."
     },
+    "period": {
+      "week": "Semaine",
+      "month": "Mois",
+      "year": "Année"
+    },
     "leaderboard": {
       "thisWeek": "Cette semaine",
       "thisMonth": "Ce mois-ci",

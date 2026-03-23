@@ -319,6 +319,11 @@
       "inDays": "in {days}d",
       "allCaughtUp": "All caught up! No tasks due soon."
     },
+    "period": {
+      "week": "Week",
+      "month": "Month",
+      "year": "Year"
+    },
     "leaderboard": {
       "thisWeek": "This Week",
       "thisMonth": "This Month",

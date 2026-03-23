@@ -319,6 +319,11 @@
       "inDays": "in {days}T",
       "allCaughtUp": "Alles erledigt! Keine Aufgaben in Kürze fällig."
     },
+    "period": {
+      "week": "Woche",
+      "month": "Monat",
+      "year": "Jahr"
+    },
     "leaderboard": {
       "thisWeek": "Diese Woche",
       "thisMonth": "Diesen Monat",

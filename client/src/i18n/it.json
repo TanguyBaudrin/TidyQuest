@@ -319,6 +319,11 @@
       "inDays": "tra {days}g",
       "allCaughtUp": "Tutto sotto controllo! Nessuna attività in scadenza a breve."
     },
+    "period": {
+      "week": "Settimana",
+      "month": "Mese",
+      "year": "Anno"
+    },
     "leaderboard": {
       "thisWeek": "Questa settimana",
       "thisMonth": "Questo mese",

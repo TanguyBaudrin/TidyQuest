@@ -189,6 +189,10 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   const [sortAsc, setSortAsc] = useState(true);
 
   const [adminModalTask, setAdminModalTask] = useState<Task | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templateTasks, setTemplateTasks] = useState<Array<{ name: string; translationKey?: string; iconKey?: string; frequencyDays: number; effort: number; isSeasonal?: boolean; selected: boolean }>>([]);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateAdding, setTemplateAdding] = useState(false);
 
   // Initialize percentages evenly for custom mode
   const initPercentages = (userIds: number[]): Record<number, number> => {
@@ -968,16 +972,37 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
             </div>
           </div>
         ) : isAdmin ? (
-          <div style={{ padding: '14px 8px' }}>
+          <div style={{ padding: '14px 8px', display: 'flex', gap: 8 }}>
             <button onClick={() => setShowAddTask(true)}
               className="tq-btn-md"
               style={{
                 background: 'none', border: '1.5px dashed var(--warm-border)', borderRadius: 12,
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                fontWeight: 700, color: 'var(--warm-text-light)', fontFamily: 'Nunito', width: '100%',
+                fontWeight: 700, color: 'var(--warm-text-light)', fontFamily: 'Nunito', flex: 1,
                 justifyContent: 'center',
               }}>
               <PlusIcon /> {t('roomDetail.addTask')}
+            </button>
+            <button onClick={() => {
+              setShowTemplates(true);
+              setTemplateLoading(true);
+              api.getDefaultTasks(room.roomType).then((defaults) => {
+                const existingNames = new Set(room.tasks.map(t => t.name.toLowerCase()));
+                setTemplateTasks(defaults.map(d => ({
+                  ...d, translationKey: (d as any).translationKey, iconKey: (d as any).iconKey,
+                  selected: false,
+                })).filter(d => !existingNames.has(d.name.toLowerCase())));
+                setTemplateLoading(false);
+              }).catch(() => { setTemplateTasks([]); setTemplateLoading(false); });
+            }}
+              className="tq-btn-md"
+              style={{
+                background: 'none', border: '1.5px dashed var(--warm-border)', borderRadius: 12,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                fontWeight: 700, color: 'var(--warm-text-light)', fontFamily: 'Nunito',
+                justifyContent: 'center', padding: '0 16px',
+              }}>
+              {t('roomDetail.addFromTemplates')}
             </button>
           </div>
         ) : null}
@@ -991,6 +1016,68 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
         onConfirm={handleAdminModalConfirm}
         onClose={() => setAdminModalTask(null)}
       />
+    )}
+    {showTemplates && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}
+        onClick={(e) => { if (e.target === e.currentTarget) setShowTemplates(false); }}>
+        <div className="tq-card" style={{ padding: 24, width: 420, maxWidth: 'calc(100vw - 24px)', maxHeight: '80vh', overflow: 'auto' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--warm-text)', margin: '0 0 16px' }}>
+            {t('roomDetail.addFromTemplates')}
+          </h3>
+          {templateLoading ? (
+            <p style={{ fontSize: 13, color: 'var(--warm-text-light)', textAlign: 'center', padding: 20 }}>...</p>
+          ) : templateTasks.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--warm-text-light)', textAlign: 'center', padding: 20 }}>
+              {t('roomDetail.noTemplates')}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {templateTasks.map((tt, i) => (
+                <label key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                  padding: '10px 12px', borderRadius: 12,
+                  border: `1.5px solid ${tt.selected ? 'var(--warm-accent)' : 'var(--warm-border)'}`,
+                  backgroundColor: tt.selected ? 'var(--warm-accent-light)' : 'var(--warm-bg-subtle)',
+                  transition: 'all 0.15s ease',
+                }}>
+                  <input type="checkbox" checked={tt.selected}
+                    onChange={() => {
+                      setTemplateTasks(prev => prev.map((t, j) => j === i ? { ...t, selected: !t.selected } : t));
+                    }}
+                    style={{ width: 16, height: 16, accentColor: 'var(--warm-accent)', cursor: 'pointer' }} />
+                  <TaskIcon iconKey={tt.iconKey || 'sparkle'} size={20} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--warm-text)' }}>
+                    {tt.translationKey ? translateTask(tt.translationKey, tt.name) : tt.name}
+                  </span>
+                  <EffortDots effort={tt.effort} size={10} />
+                </label>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button className="tq-btn tq-btn-secondary" onClick={() => setShowTemplates(false)}
+              style={{ flex: 1 }}>{t('common.cancel')}</button>
+            <button className="tq-btn tq-btn-primary" disabled={templateAdding || !templateTasks.some(t => t.selected)}
+              onClick={async () => {
+                setTemplateAdding(true);
+                const selected = templateTasks.filter(t => t.selected);
+                for (const tt of selected) {
+                  await api.createTask(room.id, {
+                    name: tt.name, effort: tt.effort,
+                    frequencyDays: tt.frequencyDays,
+                    health: 100, iconKey: tt.iconKey || 'sparkle',
+                  });
+                }
+                setTemplateAdding(false);
+                setShowTemplates(false);
+                onRefresh?.();
+              }}
+              style={{ flex: 1 }}>
+              {templateAdding ? '...' : `${t('roomDetail.addTask')} (${templateTasks.filter(t => t.selected).length})`}
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

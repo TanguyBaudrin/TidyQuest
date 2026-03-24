@@ -416,6 +416,8 @@
       "showInDashboard": "Afficher dans le tableau de bord",
       "taskName": "Nom de la tâche...",
       "addTask": "Ajouter une tâche",
+      "addFromTemplates": "Modèles",
+      "noTemplates": "Toutes les tâches modèles existent déjà dans cette pièce",
       "icon": "Icône",
       "nextDue": "Prochaine échéance",
       "overdue": "En retard",
@@ -448,6 +450,8 @@
       "completedToday": "Complétées aujourd'hui",
       "recentActivity": "Activité récente",
       "customise": "Personnaliser",
+      "allTasks": "Tous",
+      "myTasks": "Les miennes",
       "noQuests": "Aucune quête pour aujourd'hui",
       "roomsCount": "Pièces",
       "tasksCount": "Tâches",
@@ -569,7 +573,10 @@
       "alreadyHaveAccount": "Déjà un compte ? Se connecter",
       "allFieldsRequired": "Tous les champs sont requis",
       "loginFailed": "Échec de connexion",
-      "registrationFailed": "Échec de l'inscription"
+      "registrationFailed": "Échec de l'inscription",
+      "selectUser": "Qui es-tu ?",
+      "orTypeUsername": "Ou tapez votre nom d'utilisateur",
+      "switchUser": "Changer d'utilisateur"
     },
     "achievements": {
       "familyProgress": "Progression famille",

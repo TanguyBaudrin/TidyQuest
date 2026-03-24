@@ -416,6 +416,8 @@
       "showInDashboard": "Im Dashboard anzeigen",
       "taskName": "Aufgabenname...",
       "addTask": "Aufgabe hinzufügen",
+      "addFromTemplates": "Vorlagen",
+      "noTemplates": "Alle Vorlagen-Aufgaben existieren bereits in diesem Raum",
       "icon": "Symbol",
       "nextDue": "Nächste Fälligkeit",
       "overdue": "Überfällig",
@@ -448,6 +450,8 @@
       "completedToday": "Heute erledigt",
       "recentActivity": "Letzte Aktivitäten",
       "customise": "Anpassen",
+      "allTasks": "Alle",
+      "myTasks": "Meine",
       "noQuests": "Keine Aufgaben für heute",
       "roomsCount": "Räume",
       "tasksCount": "Aufgaben",
@@ -569,7 +573,10 @@
       "alreadyHaveAccount": "Schon ein Konto? Anmelden",
       "allFieldsRequired": "Alle Felder sind erforderlich",
       "loginFailed": "Anmeldung fehlgeschlagen",
-      "registrationFailed": "Registrierung fehlgeschlagen"
+      "registrationFailed": "Registrierung fehlgeschlagen",
+      "selectUser": "Wer bist du?",
+      "orTypeUsername": "Oder Benutzernamen eingeben",
+      "switchUser": "Benutzer wechseln"
     },
     "achievements": {
       "familyProgress": "Fortschritt der Familie",

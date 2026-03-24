@@ -416,6 +416,8 @@
       "showInDashboard": "Mostra nella dashboard",
       "taskName": "Nome attività...",
       "addTask": "Aggiungi attività",
+      "addFromTemplates": "Modelli",
+      "noTemplates": "Tutte le attività modello esistono già in questa stanza",
       "icon": "Icona",
       "nextDue": "Prossima scadenza",
       "overdue": "In ritardo",
@@ -448,6 +450,8 @@
       "completedToday": "Completate oggi",
       "recentActivity": "Attività recenti",
       "customise": "Personalizza",
+      "allTasks": "Tutti",
+      "myTasks": "Le mie",
       "noQuests": "Nessuna missione per oggi",
       "roomsCount": "Stanze",
       "tasksCount": "Attività",
@@ -569,7 +573,10 @@
       "alreadyHaveAccount": "Hai già un account? Accedi",
       "allFieldsRequired": "Tutti i campi sono obbligatori",
       "loginFailed": "Accesso non riuscito",
-      "registrationFailed": "Registrazione non riuscita"
+      "registrationFailed": "Registrazione non riuscita",
+      "selectUser": "Chi sei?",
+      "orTypeUsername": "Oppure digita il tuo nome utente",
+      "switchUser": "Cambia utente"
     },
     "achievements": {
       "familyProgress": "Progresso famiglia",

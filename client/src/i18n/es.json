@@ -416,6 +416,8 @@
       "showInDashboard": "Mostrar en el panel",
       "taskName": "Nombre de la tarea...",
       "addTask": "Añadir tarea",
+      "addFromTemplates": "Plantillas",
+      "noTemplates": "Todas las tareas de plantilla ya existen en esta habitación",
       "icon": "Icono",
       "nextDue": "Próxima fecha",
       "overdue": "Atrasada",
@@ -448,6 +450,8 @@
       "completedToday": "Completadas hoy",
       "recentActivity": "Actividad reciente",
       "customise": "Personalizar",
+      "allTasks": "Todos",
+      "myTasks": "Mías",
       "noQuests": "No hay misiones para hoy",
       "roomsCount": "Habitaciones",
       "tasksCount": "Tareas",
@@ -569,7 +573,10 @@
       "alreadyHaveAccount": "¿Ya tienes cuenta? Inicia sesión",
       "allFieldsRequired": "Todos los campos son obligatorios",
       "loginFailed": "Error de inicio de sesión",
-      "registrationFailed": "Error en el registro"
+      "registrationFailed": "Error en el registro",
+      "selectUser": "¿Quién eres?",
+      "orTypeUsername": "O escribe tu nombre de usuario",
+      "switchUser": "Cambiar de usuario"
     },
     "achievements": {
       "familyProgress": "Progreso familiar",

@@ -78,6 +78,13 @@ router.get('/registration-status', (_req: AuthRequest, res: Response) => {
   res.json({ registrationEnabled });
 });
 
+router.get('/avatars', (_req: AuthRequest, res: Response) => {
+  const users = db.prepare(
+    'SELECT username, displayName, avatarColor, avatarType, avatarPreset, avatarPhotoUrl FROM users ORDER BY displayName'
+  ).all();
+  res.json(users);
+});
+
 router.post('/login', (req: AuthRequest, res: Response) => {
   const ip = (req.headers['x-forwarded-for'] as string || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
   if (!checkRateLimit(ip)) {

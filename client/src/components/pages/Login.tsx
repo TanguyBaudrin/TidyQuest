@@ -1,7 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SparkleIcon } from '../icons/UIIcons';
 import { useTranslation } from '../../hooks/useTranslation';
 import { api } from '../../hooks/useApi';
+import UserAvatar from '../shared/UserAvatar';
+
+interface LoginUser {
+  username: string;
+  displayName: string;
+  avatarColor: string;
+  avatarType: string;
+  avatarPreset?: string;
+  avatarPhotoUrl?: string;
+}
 
 interface LoginProps {
   onLogin: (username: string, password: string) => Promise<void>;
@@ -22,12 +32,26 @@ export function Login({ onLogin, onSwitchToRegister }: LoginProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [avatarUsers, setAvatarUsers] = useState<LoginUser[]>([]);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     api.getRegistrationStatus()
       .then((s) => setRegistrationEnabled(s.registrationEnabled))
       .catch(() => {});
+    api.getLoginAvatars()
+      .then((users) => setAvatarUsers(users))
+      .catch(() => {});
   }, []);
+
+  const handleAvatarClick = (user: LoginUser) => {
+    setUsername(user.username);
+    setSelectedUser(user.username);
+    setError('');
+    setPassword('');
+    setTimeout(() => passwordRef.current?.focus(), 50);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,30 +104,126 @@ export function Login({ onLogin, onSwitchToRegister }: LoginProps) {
           </select>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: 14 }}>
-            <label className="tq-label" style={{ textTransform: 'none' }}>{t('auth.username')}</label>
-            <input value={username} onChange={(e) => setUsername(e.target.value)}
-              className="tq-input" style={{ backgroundColor: 'var(--warm-bg-subtle)' }}
-              placeholder={t('auth.usernamePlaceholder')}
-            />
-          </div>
+        {avatarUsers.length > 0 && !selectedUser && (
           <div style={{ marginBottom: 20 }}>
-            <label className="tq-label" style={{ textTransform: 'none' }}>{t('auth.password')}</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              className="tq-input" style={{ backgroundColor: 'var(--warm-bg-subtle)' }}
-              placeholder={t('auth.passwordPlaceholder')}
-            />
+            <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', textAlign: 'center', marginBottom: 12 }}>
+              {t('auth.selectUser')}
+            </p>
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 12,
+            }}>
+              {avatarUsers.map((u) => (
+                <button
+                  key={u.username}
+                  type="button"
+                  onClick={() => handleAvatarClick(u)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+                    padding: '10px 8px', borderRadius: 14, border: '1.5px solid var(--warm-border)',
+                    backgroundColor: 'var(--warm-bg-subtle)', cursor: 'pointer',
+                    minWidth: 72, transition: 'all 0.15s ease', fontFamily: 'Nunito',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--warm-accent)';
+                    e.currentTarget.style.backgroundColor = 'var(--warm-accent-light)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = 'var(--warm-border)';
+                    e.currentTarget.style.backgroundColor = 'var(--warm-bg-subtle)';
+                  }}
+                >
+                  <UserAvatar
+                    name={u.displayName}
+                    color={u.avatarColor}
+                    size={48}
+                    avatarType={u.avatarType as any}
+                    avatarPreset={u.avatarPreset}
+                    avatarPhotoUrl={u.avatarPhotoUrl}
+                  />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text)' }}>
+                    {u.displayName}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div style={{ textAlign: 'center', marginTop: 14 }}>
+              <button
+                type="button"
+                onClick={() => setSelectedUser('')}
+                style={{
+                  background: 'none', border: 'none', color: 'var(--warm-text-light)',
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'Nunito',
+                  textDecoration: 'underline',
+                }}
+              >
+                {t('auth.orTypeUsername')}
+              </button>
+            </div>
           </div>
+        )}
 
-          {error && <div style={{ fontSize: 12, color: 'var(--warm-badge-text)', fontWeight: 700, marginBottom: 14, textAlign: 'center' }}>{error}</div>}
+        {(selectedUser !== null || avatarUsers.length === 0) && (
+          <form onSubmit={handleSubmit}>
+            {selectedUser && (
+              <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                {(() => {
+                  const u = avatarUsers.find((a) => a.username === selectedUser);
+                  if (!u) return null;
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                      <UserAvatar
+                        name={u.displayName}
+                        color={u.avatarColor}
+                        size={56}
+                        avatarType={u.avatarType as any}
+                        avatarPreset={u.avatarPreset}
+                        avatarPhotoUrl={u.avatarPhotoUrl}
+                      />
+                      <span style={{ fontSize: 14, fontWeight: 800, color: 'var(--warm-text)' }}>{u.displayName}</span>
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedUser(null); setUsername(''); setPassword(''); setError(''); }}
+                        style={{
+                          background: 'none', border: 'none', color: 'var(--warm-text-light)',
+                          fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'Nunito',
+                          textDecoration: 'underline',
+                        }}
+                      >
+                        {t('auth.switchUser')}
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
-          <button type="submit" className="tq-btn tq-btn-primary tq-btn-lg"
-            disabled={loading}
-            style={{ width: '100%', justifyContent: 'center' }}>
-            {loading ? t('auth.loggingIn') : t('auth.logIn')}
-          </button>
-        </form>
+            {!selectedUser && (
+              <div style={{ marginBottom: 14 }}>
+                <label className="tq-label" style={{ textTransform: 'none' }}>{t('auth.username')}</label>
+                <input value={username} onChange={(e) => setUsername(e.target.value)}
+                  className="tq-input" style={{ backgroundColor: 'var(--warm-bg-subtle)' }}
+                  placeholder={t('auth.usernamePlaceholder')}
+                />
+              </div>
+            )}
+            <div style={{ marginBottom: 20 }}>
+              <label className="tq-label" style={{ textTransform: 'none' }}>{t('auth.password')}</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                ref={passwordRef}
+                className="tq-input" style={{ backgroundColor: 'var(--warm-bg-subtle)' }}
+                placeholder={t('auth.passwordPlaceholder')}
+              />
+            </div>
+
+            {error && <div style={{ fontSize: 12, color: 'var(--warm-badge-text)', fontWeight: 700, marginBottom: 14, textAlign: 'center' }}>{error}</div>}
+
+            <button type="submit" className="tq-btn tq-btn-primary tq-btn-lg"
+              disabled={loading}
+              style={{ width: '100%', justifyContent: 'center' }}>
+              {loading ? t('auth.loggingIn') : t('auth.logIn')}
+            </button>
+          </form>
+        )}
 
         {registrationEnabled && (
           <div style={{ textAlign: 'center', marginTop: 18 }}>

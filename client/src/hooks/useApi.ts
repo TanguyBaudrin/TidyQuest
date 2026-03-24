@@ -126,6 +126,8 @@ export const api = {
   achievements: () => apiFetch<any>('/achievements'),
   getRegistrationStatus: () =>
     fetch('/api/auth/registration-status').then((r) => r.json()) as Promise<{ registrationEnabled: boolean }>,
+  getLoginAvatars: () =>
+    fetch('/api/auth/avatars').then((r) => r.json()) as Promise<Array<{ username: string; displayName: string; avatarColor: string; avatarType: string; avatarPreset?: string; avatarPhotoUrl?: string }>>,
   getGamificationConfig: () =>
     apiFetch<{ gamificationEnabled: boolean }>('/users/gamification-config'),
   updateGamificationConfig: (data: { gamificationEnabled: boolean }) =>

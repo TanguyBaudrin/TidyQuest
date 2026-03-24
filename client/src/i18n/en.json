@@ -416,6 +416,8 @@
       "showInDashboard": "Show in Dashboard",
       "taskName": "Task name...",
       "addTask": "Add Task",
+      "addFromTemplates": "Templates",
+      "noTemplates": "All template tasks already exist in this room",
       "icon": "Icon",
       "nextDue": "Next Due",
       "overdue": "Overdue",
@@ -448,6 +450,8 @@
       "completedToday": "Completed Today",
       "recentActivity": "Recent Activity",
       "customise": "Customise",
+      "allTasks": "All",
+      "myTasks": "Mine",
       "noQuests": "No quests for today",
       "roomsCount": "Rooms",
       "tasksCount": "Tasks",
@@ -569,7 +573,10 @@
       "alreadyHaveAccount": "Already have an account? Log in",
       "allFieldsRequired": "All fields are required",
       "loginFailed": "Login failed",
-      "registrationFailed": "Registration failed"
+      "registrationFailed": "Registration failed",
+      "selectUser": "Who are you?",
+      "orTypeUsername": "Or type your username",
+      "switchUser": "Switch user"
     },
     "achievements": {
       "familyProgress": "Family Progress",

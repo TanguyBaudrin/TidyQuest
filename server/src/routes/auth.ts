@@ -31,6 +31,11 @@ setInterval(() => {
 const router = Router();
 
 router.post('/register', (req: AuthRequest, res: Response) => {
+  const ip = (req.headers['x-forwarded-for'] as string || req.socket?.remoteAddress || 'unknown').split(',')[0].trim();
+  if (!checkRateLimit(ip)) {
+    return res.status(429).json({ error: 'Too many registration attempts. Please try again later.' });
+  }
+
   const { username, password, displayName, avatarColor, language } = req.body;
 
   if (!username || !password || !displayName) {
@@ -61,7 +66,8 @@ router.post('/register', (req: AuthRequest, res: Response) => {
 
   const token = generateToken(result.lastInsertRowid as number);
   const user = db.prepare('SELECT id, username, displayName, role, avatarColor, avatarType, avatarPreset, avatarPhotoUrl, coins, currentStreak, goalCoins, goalStartAt, goalEndAt, language FROM users WHERE id = ?')
-    .get(result.lastInsertRowid);
+    .get(result.lastInsertRowid) as any;
+  user.points = 0;
 
   res.status(201).json({ token, user });
 });
@@ -70,6 +76,13 @@ router.get('/registration-status', (_req: AuthRequest, res: Response) => {
   const row = db.prepare("SELECT value FROM app_settings WHERE key = 'registrationEnabled'").get() as { value: string } | undefined;
   const registrationEnabled = row ? row.value !== '0' : true;
   res.json({ registrationEnabled });
+});
+
+router.get('/avatars', (_req: AuthRequest, res: Response) => {
+  const users = db.prepare(
+    'SELECT username, displayName, avatarColor, avatarType, avatarPreset, avatarPhotoUrl FROM users ORDER BY displayName'
+  ).all();
+  res.json(users);
 });
 
 router.post('/login', (req: AuthRequest, res: Response) => {
@@ -91,18 +104,27 @@ router.post('/login', (req: AuthRequest, res: Response) => {
 
   const token = generateToken(user.id);
   const { passwordHash, ...safeUser } = user;
+  
+  const pointsRow = db.prepare(
+    "SELECT COALESCE(SUM(coinsEarned), 0) as points FROM task_completions WHERE userId = ? AND status = 'approved'"
+  ).get(user.id) as any;
+  safeUser.points = pointsRow?.points ?? 0;
   res.json({ token, user: safeUser });
+
 });
+
 
 router.get('/me', authMiddleware, (req: AuthRequest, res: Response) => {
   const user = db.prepare(
     'SELECT id, username, displayName, role, avatarColor, avatarType, avatarPreset, avatarPhotoUrl, coins, currentStreak, goalCoins, goalStartAt, goalEndAt, lastActiveDate, isVacationMode, language, createdAt FROM users WHERE id = ?'
   ).get(req.userId) as any;
-
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-
+  const pointsRow = db.prepare(
+    "SELECT COALESCE(SUM(coinsEarned), 0) as points FROM task_completions WHERE userId = ? AND status = 'approved'"
+  ).get(req.userId) as any;
+  user.points = pointsRow?.points ?? 0;
   res.json(user);
 });
 

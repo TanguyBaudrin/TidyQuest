@@ -30,13 +30,13 @@ export function History({ language, isAdmin }: { language?: string; isAdmin?: bo
   };
 
   return (
-    <div className="page-enter" style={{ maxWidth: 750 }}>
-      <div className="tq-card" style={{ padding: 22 }}>
+    <div className="page-enter">
+      <div className="tq-card tq-card-padded">
         <div className="history-table-scroll">
           <div className="history-header" style={{
             display: 'grid', gridTemplateColumns: isAdmin ? '44px 1fr 120px 100px 80px 60px' : '44px 1fr 120px 100px 80px',
-            gap: 12, padding: '0 8px 14px', borderBottom: '1.5px solid #F0E6D9',
-            fontSize: 11, fontWeight: 800, color: '#B0A090', textTransform: 'uppercase', letterSpacing: 1,
+            gap: 12, padding: '0 8px 14px', borderBottom: '1.5px solid var(--warm-border)',
+            fontSize: 11, fontWeight: 800, color: 'var(--warm-text-light)', textTransform: 'uppercase', letterSpacing: 1,
           }}>
             <div></div>
             <div>{t('history.task')}</div>
@@ -55,7 +55,7 @@ export function History({ language, isAdmin }: { language?: string; isAdmin?: bo
             <div key={h.id} className="history-row" style={{
               display: 'grid', gridTemplateColumns: isAdmin ? '44px 1fr 120px 100px 80px 60px' : '44px 1fr 120px 100px 80px',
               gap: 12, padding: '14px 8px', alignItems: 'center',
-              borderBottom: '1px solid #F5EDE3',
+              borderBottom: '1px solid var(--warm-border-subtle)',
             }}>
               {isDuo ? (
                 <div style={{ position: 'relative', width: 44, height: 34, flexShrink: 0 }}>
@@ -69,24 +69,24 @@ export function History({ language, isAdmin }: { language?: string; isAdmin?: bo
                 <UserAvatar name={h.displayName} color={h.avatarColor} size={34} avatarType={h.avatarType} avatarPreset={h.avatarPreset} avatarPhotoUrl={h.avatarPhotoUrl} />
               )}
               <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#3D2F1E' }}>{taskName(h.taskName, h.translationKey)}</div>
-                <div style={{ fontSize: 11, color: '#B0A090', fontWeight: 600 }}>{t('history.by')} {byName}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--warm-text)' }}>{taskName(h.taskName, h.translationKey)}</div>
+                <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600 }}>{t('history.by')} {byName}</div>
                 <div className="history-mobile-meta">{roomDisplayName(h.roomName, h.roomType || '')} · {timeAgo(h.completedAt)}</div>
               </div>
-              <div className="history-col-room" style={{ fontSize: 13, color: '#6B5B4A', fontWeight: 600 }}>{roomDisplayName(h.roomName, h.roomType || '')}</div>
-              <div className="history-col-when" style={{ fontSize: 12, color: '#B0A090', fontWeight: 600 }}>{timeAgo(h.completedAt)}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', fontSize: 13, fontWeight: 800, color: '#F59E0B' }}>
+              <div className="history-col-room" style={{ fontSize: 13, color: 'var(--warm-text-secondary)', fontWeight: 600 }}>{roomDisplayName(h.roomName, h.roomType || '')}</div>
+              <div className="history-col-when" style={{ fontSize: 12, color: 'var(--warm-text-light)', fontWeight: 600 }}>{timeAgo(h.completedAt)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end', fontSize: 13, fontWeight: 800, color: 'var(--warm-coin)' }}>
                 +{h.coinsEarned} <CoinIcon />
               </div>
               {isAdmin && (
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                   {confirmCancel === h.id ? (
                     <div style={{ display: 'flex', gap: 4 }}>
-                      <button onClick={() => handleCancel(h.id)} style={{ background: 'none', border: '1px solid #EF4444', borderRadius: 8, padding: '3px 7px', fontSize: 10, fontWeight: 700, color: '#EF4444', cursor: 'pointer', fontFamily: 'Nunito' }}>✓</button>
-                      <button onClick={() => setConfirmCancel(null)} style={{ background: 'none', border: '1px solid #B0A090', borderRadius: 8, padding: '3px 7px', fontSize: 10, fontWeight: 700, color: '#B0A090', cursor: 'pointer', fontFamily: 'Nunito' }}>✗</button>
+                      <button onClick={() => handleCancel(h.id)} style={{ background: 'none', border: '1px solid var(--warm-danger)', borderRadius: 8, padding: '3px 7px', fontSize: 10, fontWeight: 700, color: 'var(--warm-danger)', cursor: 'pointer', fontFamily: 'Nunito' }}>✓</button>
+                      <button onClick={() => setConfirmCancel(null)} style={{ background: 'none', border: '1px solid var(--warm-text-light)', borderRadius: 8, padding: '3px 7px', fontSize: 10, fontWeight: 700, color: 'var(--warm-text-light)', cursor: 'pointer', fontFamily: 'Nunito' }}>✗</button>
                     </div>
                   ) : (
-                    <button onClick={() => setConfirmCancel(h.id)} title={t('history.cancel')} style={{ background: 'none', border: '1px solid #E2D5C5', borderRadius: 8, padding: '3px 8px', fontSize: 13, cursor: 'pointer', opacity: 0.6 }}>🗑</button>
+                    <button onClick={() => setConfirmCancel(h.id)} title={t('history.cancel')} style={{ background: 'none', border: '1px solid var(--warm-border)', borderRadius: 8, padding: '3px 8px', fontSize: 13, cursor: 'pointer', color: 'var(--warm-text-muted)' }}>🗑</button>
                   )}
                 </div>
               )}
@@ -95,7 +95,7 @@ export function History({ language, isAdmin }: { language?: string; isAdmin?: bo
           })}
 
           {history.length === 0 && (
-            <div style={{ padding: 40, textAlign: 'center', color: '#B0A090', fontWeight: 600, fontSize: 14 }}>
+            <div className="tq-empty-state">
               {t('history.noActivity')}
             </div>
           )}
@@ -103,17 +103,17 @@ export function History({ language, isAdmin }: { language?: string; isAdmin?: bo
 
         {total > limit && (
           <div style={{ display: 'flex', justifyContent: 'center', gap: 10, padding: '18px 0 4px' }}>
-            <button className="tq-btn tq-btn-secondary" disabled={offset === 0}
+            <button className="tq-btn tq-btn-secondary tq-btn-sm" disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - limit))}
-              style={{ padding: '8px 18px', fontSize: 12, opacity: offset === 0 ? 0.4 : 1 }}>
+              style={{ opacity: offset === 0 ? 0.4 : 1 }}>
               {t('history.previous')}
             </button>
-            <span style={{ fontSize: 12, color: '#B0A090', fontWeight: 600, padding: '8px 0' }}>
+            <span style={{ fontSize: 12, color: 'var(--warm-text-light)', fontWeight: 600, padding: '8px 0' }}>
               {offset + 1}-{Math.min(offset + limit, total)} {t('history.of')} {total}
             </span>
-            <button className="tq-btn tq-btn-secondary" disabled={offset + limit >= total}
+            <button className="tq-btn tq-btn-secondary tq-btn-sm" disabled={offset + limit >= total}
               onClick={() => setOffset(offset + limit)}
-              style={{ padding: '8px 18px', fontSize: 12, opacity: offset + limit >= total ? 0.4 : 1 }}>
+              style={{ opacity: offset + limit >= total ? 0.4 : 1 }}>
               {t('history.next')}
             </button>
           </div>

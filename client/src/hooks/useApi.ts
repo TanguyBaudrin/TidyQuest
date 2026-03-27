@@ -59,14 +59,14 @@ export const api = {
 
   // Tasks
   getTasks: (roomId: number) => apiFetch<any[]>(`/rooms/${roomId}/tasks`),
-  createTask: (roomId: number, data: { name: string; notes?: string; frequencyDays?: number; effort?: number; isSeasonal?: boolean; health?: number; iconKey?: string; assignedToChildren?: boolean; assignedUserIds?: number[]; assignmentMode?: 'first' | 'shared' | 'custom'; assignedUserPercentages?: Record<number, number> }) =>
+  createTask: (roomId: number, data: { name: string; notes?: string; frequencyDays?: number; effort?: number; isSeasonal?: boolean; health?: number; iconKey?: string; onDemand?: boolean; showInDashboard?: boolean; assignedToChildren?: boolean; assignedUserIds?: number[]; assignmentMode?: 'first' | 'shared' | 'custom'; assignedUserPercentages?: Record<number, number> }) =>
     apiFetch<any>(`/rooms/${roomId}/tasks`, { method: 'POST', body: JSON.stringify(data) }),
   updateTask: (id: number, data: any) =>
     apiFetch<any>(`/tasks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteTask: (id: number) =>
     apiFetch<any>(`/tasks/${id}`, { method: 'DELETE' }),
   completeTask: (id: number, onBehalfOfUserId?: number) =>
-    apiFetch<{ coinsEarned: number; health: number }>(`/tasks/${id}/complete`, {
+    apiFetch<{ coinsEarned: number; health: number; pendingApproval?: boolean }>(`/tasks/${id}/complete`, {
       method: 'POST', body: JSON.stringify(onBehalfOfUserId ? { onBehalfOfUserId } : {}),
     }),
 
@@ -126,33 +126,54 @@ export const api = {
   achievements: () => apiFetch<any>('/achievements'),
   getRegistrationStatus: () =>
     fetch('/api/auth/registration-status').then((r) => r.json()) as Promise<{ registrationEnabled: boolean }>,
+  getLoginAvatars: () =>
+    fetch('/api/auth/avatars').then((r) => r.json()) as Promise<Array<{ username: string; displayName: string; avatarColor: string; avatarType: string; avatarPreset?: string; avatarPhotoUrl?: string }>>,
+  getGamificationConfig: () =>
+    apiFetch<{ gamificationEnabled: boolean }>('/users/gamification-config'),
+  updateGamificationConfig: (data: { gamificationEnabled: boolean }) =>
+    apiFetch<{ gamificationEnabled: boolean }>('/users/gamification-config', { method: 'PUT', body: JSON.stringify(data) }),
   getRegistrationConfig: () =>
     apiFetch<{ registrationEnabled: boolean }>('/users/registration-config'),
   updateRegistrationConfig: (data: { registrationEnabled: boolean }) =>
     apiFetch<{ registrationEnabled: boolean }>('/users/registration-config', { method: 'PUT', body: JSON.stringify(data) }),
   getNotificationsConfig: () =>
     apiFetch<{
-      enabled: boolean;
+      notificationsEnabled: boolean;
+      telegramEnabled: boolean;
       chatId: string;
       hasToken: boolean;
       notificationTime: string;
       notificationTypes: { taskDue: boolean; rewardRequest: boolean; achievementUnlocked: boolean };
+      ntfyEnabled: boolean;
+      ntfyServerUrl: string;
+      ntfyTopic: string;
+      hasNtfyToken: boolean;
     }>('/users/notifications-config'),
   updateNotificationsConfig: (data: {
-    enabled?: boolean;
+    notificationsEnabled?: boolean;
+    telegramEnabled?: boolean;
     botToken?: string;
     chatId?: string;
     notificationTime?: string;
     notificationTypes?: { taskDue: boolean; rewardRequest: boolean; achievementUnlocked: boolean };
+    ntfyEnabled?: boolean;
+    ntfyServerUrl?: string;
+    ntfyTopic?: string;
+    ntfyToken?: string;
   }) =>
     apiFetch<{
-      enabled: boolean;
+      notificationsEnabled: boolean;
+      telegramEnabled: boolean;
       chatId: string;
       hasToken: boolean;
       notificationTime: string;
       notificationTypes: { taskDue: boolean; rewardRequest: boolean; achievementUnlocked: boolean };
+      ntfyEnabled: boolean;
+      ntfyServerUrl: string;
+      ntfyTopic: string;
+      hasNtfyToken: boolean;
     }>('/users/notifications-config', { method: 'PUT', body: JSON.stringify(data) }),
-  sendNotificationsTest: (data?: { botToken?: string; chatId?: string }) =>
+  sendNotificationsTest: (data?: { botToken?: string; chatId?: string; provider?: 'telegram' | 'ntfy'; ntfyServerUrl?: string; ntfyTopic?: string; ntfyToken?: string }) =>
     apiFetch<{ success: boolean }>('/users/notifications-test', { method: 'POST', body: JSON.stringify(data || {}) }),
   getRewards: () =>
     apiFetch<{ rewards: Array<{ id: number; title: string; description?: string | null; costCoins: number }>; mine: Array<{ id: number; title: string; costCoins: number; redeemedAt: string; status: string }> }>('/rewards'),
@@ -173,6 +194,23 @@ export const api = {
 
   cancelCompletion: (completionId: number) =>
     apiFetch<{ success: boolean; coinsDeducted: number }>(`/completions/${completionId}`, { method: 'DELETE' }),
+  getPendingCompletions: () =>
+    apiFetch<{ pending: Array<{
+      id: number;
+      taskId: number;
+      userId: number;
+      completedAt: string;
+      coinsEarned: number;
+      taskName: string;
+      translationKey?: string | null;
+      roomId: number;
+      roomName: string;
+      displayName: string;
+    }> }>('/completions/pending'),
+  approveCompletion: (completionId: number) =>
+    apiFetch<{ success: boolean }>(`/completions/${completionId}/approve`, { method: 'POST' }),
+  rejectPendingCompletion: (completionId: number) =>
+    apiFetch<{ success: boolean }>(`/completions/${completionId}/reject`, { method: 'DELETE' }),
 
   adjustCoins: (userId: number, amount: number) =>
     apiFetch<any>(`/users/${userId}/adjust-coins`, { method: 'POST', body: JSON.stringify({ amount }) }),
@@ -181,4 +219,12 @@ export const api = {
     apiFetch<{ vacationMode: boolean; vacationStartDate: string | null; vacationEndDate: string | null }>('/users/vacation-config'),
   updateVacationConfig: (data: { vacationMode?: boolean; vacationEndDate?: string | null }) =>
     apiFetch<{ vacationMode: boolean; vacationStartDate: string | null; vacationEndDate: string | null }>('/users/vacation-config', { method: 'PUT', body: JSON.stringify(data) }),
+
+  updateUserVacation: (userId: number, data: { isVacationMode?: boolean; vacationEndDate?: string | null }) =>
+    apiFetch<any>(`/users/${userId}/vacation`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  getStrictModeConfig: () =>
+    apiFetch<{ strictMode: boolean }>('/users/strict-mode-config'),
+  updateStrictModeConfig: (data: { strictMode: boolean }) =>
+    apiFetch<{ strictMode: boolean }>('/users/strict-mode-config', { method: 'PUT', body: JSON.stringify(data) }),
 };

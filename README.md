@@ -4,9 +4,10 @@
 
 **TidyQuest** is a self-hosted web application that gamifies housework using RPG mechanics. Complete tasks, earn coins, unlock achievements, and compete with your family on the leaderboard.
 
-![Version](https://img.shields.io/badge/version-0.3.0-orange.svg)
+![Version](https://img.shields.io/badge/version-0.5.0--beta.1-orange.svg)
 ![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)
+[![Discord](https://img.shields.io/badge/Discord-Join%20us-5865F2?logo=discord&logoColor=white)](https://discord.gg/ucXmKM6y)
 
 > [!WARNING]
 > **Early-stage project** — TidyQuest is under active development. You may encounter bugs, incomplete features, or breaking changes between versions. Back up your data regularly and feel free to [open an issue](https://github.com/mellow-fox/TidyQuest/issues) if something breaks.
@@ -23,7 +24,7 @@ TidyQuest turns boring chores into quests:
 - **🎖️ Achievements**: Unlock badges for milestones (100 tasks, 30-day streak, etc.)
 - **📅 Calendar View**: See upcoming due dates at a glance
 - **🌍 Multilingual**: English, French, German, Spanish, Italian
-- **📱 Telegram Notifications**: Optional reminders for due tasks and rewards
+- **📱 Notifications**: Optional reminders via Telegram or ntfy
 
 Perfect for families who want to:
 - Make chores fun for kids
@@ -93,6 +94,7 @@ Fastest way to get started using pre-built multi-platform image:
        environment:
          - NODE_ENV=production
          - JWT_SECRET=CHANGE_THIS_TO_SECURE_RANDOM_STRING_MIN_32_CHARS
+         - TZ=Europe/Paris  # Your timezone — used for day/week boundaries & notifications
        volumes:
          - ./data:/app/data
        restart: unless-stopped
@@ -151,14 +153,17 @@ On first launch, the database is empty. Create an admin account via the **Regist
 ### For Admins
 - 👥 **User Management**: Create family members (admin/member/child roles)
 - 📝 **Task CRUD**: Create, edit, delete tasks with custom frequencies (1-365 days)
-- 🎁 **Reward System**: Approve/reject reward requests, manage catalog
-- ⚙️ **Global Settings**: Configure coins-per-effort, Telegram notifications
-- 🏖️ **Vacation Mode**: Pause task health decay during family vacations
+- 🎁 **Reward System**: Approve/reject reward requests, manage and customize catalog
+- ⚙️ **Global Settings**: Configure coins-per-effort, notifications (Telegram or ntfy)
+- 🏖️ **Vacation Mode**: Pause task health decay globally or per member, with individual return dates
 - 📤 **Backup/Restore**: Export full database as JSON
 - 👤 **Task Assignment**: Assign tasks to specific users with three modes:
   - **First** — first person to complete earns all coins
   - **Shared** — each assignee completes once; coins split equally
   - **Custom** — define a custom coin percentage per assignee (e.g. 70% / 30%)
+- ✅ **Strict Mode**: Require admin approval before task completions count
+- 💑 **Couple Mode**: Disable gamification (coins, streaks, leaderboard) for simpler tracking
+- 🔑 **Password Recovery**: Reset admin password via environment variable
 
 ### Built-in Defaults
 - **8 Room Types**: Kitchen, Bedroom, Bathroom, Living Room, Office, Garage, Laundry, Garden
@@ -179,9 +184,9 @@ On first launch, the database is empty. Create an admin account via the **Regist
 | **Auth** | JWT + bcrypt |
 | **Deployment** | Docker (single container, ~300MB) |
 | **Routing** | React Router v7 |
-| **Styling** | Custom CSS (no framework) |
+| **Styling** | Custom design system with CSS custom properties |
 
-**Zero external dependencies** for core functionality. Optional Telegram integration for notifications.
+**Zero external dependencies** for core functionality. Optional Telegram or ntfy integration for notifications.
 
 ---
 
@@ -193,7 +198,7 @@ TidyQuest/
 │   ├── src/
 │   │   ├── components/  # UI components
 │   │   ├── hooks/       # useAuth, useApi, useTranslation
-│   │   ├── i18n/        # Translation files (EN/FR/DE/ES)
+│   │   ├── i18n/        # Translation files (EN/FR/DE/ES/IT)
 │   │   └── App.tsx
 │   └── package.json
 ├── server/           # Express backend
@@ -225,13 +230,23 @@ See `.env.example` for all options. Key variables:
 |----------|----------|-------------|
 | `JWT_SECRET` | **Yes** (prod) | Secret for signing JWT tokens (min 32 chars) |
 | `NODE_ENV` | No | `production` or `development` |
+| `TZ` | Recommended | Timezone for day/week boundaries & notifications (e.g. `Europe/Paris`). Defaults to UTC |
 | `PORT` | No | Server port (default: 3000) |
+| `ADMIN_RESET_PASSWORD` | No | One-shot admin password recovery. Set, restart, then remove. |
 
-### Telegram Notifications (Optional)
+### Notifications (Optional)
 
+TidyQuest supports two notification providers (configure in Settings, admin only):
+
+**Telegram**
 1. Create a Telegram bot via [@BotFather](https://t.me/botfather)
 2. Get your chat ID via [@userinfobot](https://t.me/userinfobot)
-3. Configure in app Settings page (admin only)
+3. Enter bot token and chat ID in Settings
+
+**ntfy**
+1. Use [ntfy.sh](https://ntfy.sh) or your own ntfy server
+2. Enter the server URL and topic in Settings
+3. Subscribe to the topic on your phone
 
 Notification types:
 - 🕐 **Daily Due Tasks**: Sent at configured time (default 09:00)
@@ -261,7 +276,23 @@ Notification types:
 4. If rejected, coins are refunded
 
 ### Vacation Mode
-Admin can enable in **Settings** to pause all health decay. Useful for family trips.
+Admin can enable vacation mode in **Settings**:
+- **Global**: Pause health decay for the entire family
+- **Per member**: Toggle vacation individually with separate return dates
+
+Vacation freezes task health and protects streaks while members are away.
+
+### Admin Password Recovery
+
+If an admin forgets their password:
+
+1. Add the environment variable to your container:
+   ```yaml
+   environment:
+     - ADMIN_RESET_PASSWORD=your-new-password
+   ```
+2. Restart the container — the first admin's password is reset
+3. **Remove the variable immediately** and restart again
 
 ---
 

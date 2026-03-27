@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import db from '../database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { calculateHealth } from '../utils/health';
-import { getGlobalVacation } from '../utils/adminHelpers';
+import { getGlobalVacation, getUserVacation, resolveVacation } from '../utils/adminHelpers';
 
 const router = Router();
 router.use(authMiddleware);
@@ -30,7 +30,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
     `SELECT tc.taskId, tc.userId, u.displayName, u.avatarColor, u.avatarType, u.avatarPreset, u.avatarPhotoUrl
      FROM task_completions tc
      JOIN users u ON tc.userId = u.id
-     WHERE date(tc.completedAt) = date(?)`
+     WHERE tc.status = 'approved' AND date(tc.completedAt, 'localtime') = date(?, 'localtime')`
   ).all(nowIso) as any[];
   const completedTodayByTask = new Map(todayCompletions.map((c: any) => [c.taskId, {
     userId: c.userId, displayName: c.displayName, avatarColor: c.avatarColor,
@@ -59,13 +59,19 @@ router.get('/', (req: AuthRequest, res: Response) => {
   const roomsWithHealth = rooms.map((room) => {
     const tasks = tasksByRoom.get(room.id) || [];
     const tasksWithHealth = tasks.map((t) => {
-      const health = calculateHealth(t.lastCompletedAt, t.frequencyDays, vacation.isVacation, vacation.startDate);
+      const taskAssigneesForTask = assigneesByTask.get(t.id) || [];
+      const effectiveIds = room.assignedUserId
+        ? [room.assignedUserId]
+        : taskAssigneesForTask.map((a: any) => a.userId);
+      const taskVac = effectiveIds.length === 1
+        ? resolveVacation(vacation, getUserVacation(effectiveIds[0]))
+        : vacation;
+      const health = calculateHealth(t.lastCompletedAt, t.frequencyDays, taskVac.isVacation, taskVac.startDate);
       const safeFreq = Math.max(1 / 24, Number(t.frequencyDays) || 7);
       const dueDateTs = t.lastCompletedAt
         ? new Date(t.lastCompletedAt).getTime() + safeFreq * 86400000
         : nowTs;
-      const dueInDays = Math.ceil((dueDateTs - nowTs) / 86400000);
-      const taskAssigneesForTask = assigneesByTask.get(t.id) || [];
+      const dueInDays = t.onDemand ? 0 : Math.max(0, Math.floor((dueDateTs - nowTs) / 86400000));
       const taskWithHealth = {
         ...t,
         isSeasonal: !!t.isSeasonal,
@@ -110,17 +116,41 @@ router.get('/', (req: AuthRequest, res: Response) => {
     ? Math.round(forHouseAvg.reduce((s, t) => s + t.health * t.effort, 0) / totalEffort)
     : 100;
 
-  // Today's quests: tasks due today or overdue, non-seasonal
-  const todaysQuests = allTasks
-    .filter((t) => !t.isSeasonal && t.dueInDays <= 0)
+  // Ready to complete: actually overdue (due date has passed), non-seasonal, non-on-demand
+  const readyToComplete = allTasks
+    .filter((t) => !t.isSeasonal && !t.onDemand && new Date(t.dueDate).getTime() <= nowTs)
+    .sort((a, b) => a.health - b.health)
+    .slice(0, 10);
+
+  // Scheduled upcoming: not yet due (due date in the future), non-seasonal, non-on-demand
+  const scheduledUpcoming = allTasks
+    .filter((t) => !t.isSeasonal && !t.onDemand && new Date(t.dueDate).getTime() > nowTs)
     .sort((a, b) => a.dueInDays - b.dueInDays || a.health - b.health)
     .slice(0, 10);
 
-  // Next tasks to come soon (non-seasonal)
-  const nextTasks = allTasks
-    .filter((t) => !t.isSeasonal && t.dueInDays > 0)
-    .sort((a, b) => a.dueInDays - b.dueInDays || a.health - b.health)
-    .slice(0, 10);
+  // On-demand quests: only those opted in via showInDashboard
+  const onDemandQuests = allTasks
+    .filter((t) => !t.isSeasonal && t.onDemand && t.showInDashboard)
+    .sort((a, b) => a.health - b.health);
+
+  // Backwards-compatible aliases
+  const todaysQuests = [...readyToComplete, ...onDemandQuests];
+  const nextTasks = scheduledUpcoming;
+
+  // Completed today
+  const completedToday = db.prepare(`
+    SELECT tc.completedAt, tc.coinsEarned,
+           t.id as taskId, t.name, t.translationKey, t.iconKey, t.roomId,
+           r.name as roomName, r.roomType, r.color as roomColor, r.accentColor as roomAccent,
+           u.displayName, u.avatarColor, u.avatarType, u.avatarPreset, u.avatarPhotoUrl
+    FROM task_completions tc
+    JOIN tasks t ON tc.taskId = t.id
+    JOIN rooms r ON t.roomId = r.id
+    JOIN users u ON tc.userId = u.id
+    WHERE tc.status = 'approved'
+      AND date(tc.completedAt, 'localtime') = date('now', 'localtime')
+    ORDER BY tc.completedAt DESC
+  `).all();
 
   // Recent activity
   const recentActivity = db.prepare(`
@@ -129,6 +159,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
     JOIN tasks t ON tc.taskId = t.id
     JOIN rooms r ON t.roomId = r.id
     JOIN users u ON tc.userId = u.id
+    WHERE tc.status = 'approved'
     ORDER BY tc.completedAt DESC
     LIMIT 5
   `).all();
@@ -138,7 +169,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
     const from = targetUser.goalStartAt || '1970-01-01T00:00:00.000Z';
     const to = targetUser.goalEndAt || '9999-12-31T23:59:59.999Z';
     const row = db.prepare(
-      'SELECT COALESCE(SUM(coinsEarned), 0) as total FROM task_completions WHERE userId = ? AND completedAt >= ? AND completedAt <= ?'
+      "SELECT COALESCE(SUM(coinsEarned), 0) as total FROM task_completions WHERE userId = ? AND status = 'approved' AND completedAt >= ? AND completedAt <= ?"
     ).get(targetUser.id, from, to) as { total: number };
     return row?.total || 0;
   }
@@ -181,7 +212,11 @@ router.get('/', (req: AuthRequest, res: Response) => {
     houseHealth,
     rooms: roomsWithHealth,
     todaysQuests,
+    readyToComplete,
+    scheduledUpcoming,
+    onDemandQuests,
     nextTasks,
+    completedToday,
     myGoal,
     childrenGoals,
     pendingRewardRequests,

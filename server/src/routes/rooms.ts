@@ -3,7 +3,7 @@ import db from '../database';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 import { calculateHealth } from '../utils/health';
 import { suggestTaskIcon } from '../utils/taskIcons';
-import { ensureAdmin, getGlobalVacation } from '../utils/adminHelpers';
+import { ensureAdmin, getGlobalVacation, getUserVacation, resolveVacation } from '../utils/adminHelpers';
 
 const router = Router();
 
@@ -148,7 +148,7 @@ router.get('/', (req: AuthRequest, res: Response) => {
     `SELECT tc.id as completionId, tc.taskId, tc.userId, u.displayName, u.avatarColor, u.avatarType, u.avatarPreset, u.avatarPhotoUrl
      FROM task_completions tc
      JOIN users u ON tc.userId = u.id
-     WHERE date(tc.completedAt) = date(?)`
+     WHERE tc.status = 'approved' AND date(tc.completedAt, 'localtime') = date(?, 'localtime')`
   ).all(nowIso) as any[];
   const completedTodayByTask = new Map(todayCompletions.map((c: any) => [c.taskId, {
     completionId: c.completionId, userId: c.userId, displayName: c.displayName, avatarColor: c.avatarColor,
@@ -195,7 +195,12 @@ router.get('/', (req: AuthRequest, res: Response) => {
         completedTodayBy: completedTodayByTask.get(t.id) || null,
         assignmentMode: mode,
         sharedCompletions: (mode === 'shared' || mode === 'custom') ? (sharedCompletionsByTask.get(t.id) || []) : undefined,
-        health: calculateHealth(t.lastCompletedAt, t.frequencyDays, vacation.isVacation, vacation.startDate),
+        health: (() => {
+          const taskVac = effectiveAssignedUserIds.length === 1
+            ? resolveVacation(vacation, getUserVacation(effectiveAssignedUserIds[0]))
+            : vacation;
+          return calculateHealth(t.lastCompletedAt, t.frequencyDays, taskVac.isVacation, taskVac.startDate);
+        })(),
       };
     });
 
@@ -270,11 +275,15 @@ router.post('/', (req: AuthRequest, res: Response) => {
     insertedTaskIds.push(taskResult.lastInsertRowid as number);
   }
 
-  // If the room is assigned to a user, also assign all tasks to that user
-  if (resolvedAssignedUserId !== null) {
-    const insertAssignee = db.prepare('INSERT OR IGNORE INTO task_assignees (taskId, userId, coinPercentage) VALUES (?, ?, 0)');
-    for (const taskId of insertedTaskIds) {
-      insertAssignee.run(taskId, resolvedAssignedUserId);
+  // Assign tasks to users: per-task assignment takes priority, then room-level fallback
+  const insertAssignee = db.prepare('INSERT OR IGNORE INTO task_assignees (taskId, userId, coinPercentage) VALUES (?, ?, 0)');
+  for (let i = 0; i < insertedTaskIds.length; i++) {
+    const taskId = insertedTaskIds[i];
+    const task = tasksToInsert[i];
+    const taskAssignedUserId = task.assignedUserId != null ? Number(task.assignedUserId) : null;
+    const effectiveUserId = taskAssignedUserId || resolvedAssignedUserId;
+    if (effectiveUserId) {
+      insertAssignee.run(taskId, effectiveUserId);
     }
   }
 

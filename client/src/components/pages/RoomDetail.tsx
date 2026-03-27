@@ -38,9 +38,9 @@ function formatFreq(days: number, t: (key: string) => string): string {
 }
 
 function healthColor(value: number): string {
-  if (value >= 70) return '#22C55E';
-  if (value >= 40) return '#F59E0B';
-  return '#EF4444';
+  if (value >= 70) return 'var(--health-green)';
+  if (value >= 40) return 'var(--health-yellow)';
+  return 'var(--health-red)';
 }
 
 function getNextDueDate(lastCompletedAt: string | null, frequencyDays: number): Date {
@@ -52,16 +52,34 @@ function getNextDueDate(lastCompletedAt: string | null, frequencyDays: number): 
 function formatNextDue(lastCompletedAt: string | null, frequencyDays: number, t: (k: string) => string, language?: string): { text: string; color: string } {
   const nextDue = getNextDueDate(lastCompletedAt, frequencyDays);
   const now = new Date();
+
+  // Time-based countdown for tasks due within the next 24 hours
+  const diffMs = nextDue.getTime() - now.getTime();
+  if (diffMs < 0) return { text: t('roomDetail.overdue'), color: 'var(--health-red)' };
+
+  const diffMinutes = Math.ceil(diffMs / (60 * 1000));
+  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+  const remainingMinutes = Math.ceil((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+
+  if (diffMinutes < 60) {
+    return { text: t('roomDetail.inMinutes').replace('{m}', `${Math.max(1, diffMinutes)}`), color: 'var(--health-yellow)' };
+  }
+  if (diffHours < 24) {
+    const text = remainingMinutes > 0
+      ? t('roomDetail.inHoursMinutes').replace('{h}', `${diffHours}`).replace('{m}', `${remainingMinutes}`)
+      : t('roomDetail.inHours').replace('{h}', `${diffHours}`);
+    return { text, color: 'var(--health-yellow)' };
+  }
+
+  // Day-based display for tasks due further out
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const dueStart = new Date(nextDue.getFullYear(), nextDue.getMonth(), nextDue.getDate());
   const diffDays = Math.round((dueStart.getTime() - todayStart.getTime()) / (24 * 60 * 60 * 1000));
-  if (diffDays < 0) return { text: t('roomDetail.overdue'), color: '#EF4444' };
-  if (diffDays === 0) return { text: t('roomDetail.today'), color: '#F59E0B' };
-  if (diffDays === 1) return { text: t('roomDetail.tomorrow'), color: '#F59E0B' };
+  if (diffDays <= 1) return { text: t('roomDetail.tomorrow'), color: 'var(--health-yellow)' };
   const localeMap: Record<string, string> = { en: 'en-US', fr: 'fr-FR', de: 'de-DE', es: 'es-ES', it: 'it-IT' };
   const locale = localeMap[language || 'en'] || 'en-US';
   const text = nextDue.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
-  return { text, color: diffDays <= 7 ? '#F59E0B' : '#22C55E' };
+  return { text, color: diffDays <= 7 ? 'var(--health-yellow)' : 'var(--health-green)' };
 }
 
 type SortKey = 'name' | 'health' | 'effort' | 'frequency' | 'coins' | 'assigned' | 'dueDate';
@@ -78,7 +96,7 @@ interface CompletedTodayBy {
 
 interface Task {
   id: number; name: string; translationKey?: string; health: number; frequencyDays: number;
-  effort: number; notes?: string | null; isSeasonal: boolean; lastCompletedAt: string | null; iconKey?: string;
+  effort: number; notes?: string | null; isSeasonal: boolean; onDemand?: boolean; showInDashboard?: boolean; lastCompletedAt: string | null; iconKey?: string;
   assignedToChildren?: boolean;
   assignedUserIds?: number[];
   assignedUsers?: Array<{ id: number; displayName: string; avatarColor: string; avatarType?: string; avatarPreset?: string; avatarPhotoUrl?: string; coinPercentage?: number }>;
@@ -114,17 +132,11 @@ function FrequencyPicker({ value, unit, onChange, t }: {
     <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
       <input type="number" min={1} max={999} value={value}
         onChange={(e) => onChange(Math.max(1, parseInt(e.target.value) || 1), unit)}
-        style={{
-          width: 52, padding: '6px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)',
-          fontSize: 12, fontFamily: 'Nunito', fontWeight: 700, color: 'var(--warm-text)',
-          outline: 'none', backgroundColor: 'var(--warm-bg-input)', textAlign: 'center',
-        }} />
+        className="tq-input-compact"
+        style={{ width: 52, textAlign: 'center', fontWeight: 700 }} />
       <select value={unit} onChange={(e) => onChange(value, e.target.value)}
-        style={{
-          padding: '6px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)',
-          fontSize: 12, fontFamily: 'Nunito', fontWeight: 600, color: 'var(--warm-text)',
-          backgroundColor: 'var(--warm-bg-input)', outline: 'none', cursor: 'pointer',
-        }}>
+        className="tq-input-compact"
+        style={{ cursor: 'pointer' }}>
         {FREQ_UNITS.map((f) => (
           <option key={f.label} value={f.label}>{t(`units.${f.label}`)}</option>
         ))}
@@ -158,7 +170,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   const { taskName: translateTask, roomDisplayName, timeAgo, t } = useTranslation(language);
   const [animatedTask, setAnimatedTask] = useState<number | null>(null);
   const [editingTask, setEditingTask] = useState<number | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', notes: '', freqValue: 7, freqUnit: 'days', effort: 1, health: 100, iconKey: 'sparkle', assignmentType: 'none' as 'none' | 'users', assignmentUserIds: [] as number[], assignmentMode: 'first' as 'first' | 'shared' | 'custom', assignmentPercentages: {} as Record<number, number> });
+  const [editForm, setEditForm] = useState({ name: '', notes: '', freqValue: 7, freqUnit: 'days', effort: 1, health: 100, iconKey: 'sparkle', onDemand: false, showInDashboard: false, assignmentType: 'none' as 'none' | 'users', assignmentUserIds: [] as number[], assignmentMode: 'first' as 'first' | 'shared' | 'custom', assignmentPercentages: {} as Record<number, number> });
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskName, setNewTaskName] = useState('');
   const [newTaskNotes, setNewTaskNotes] = useState('');
@@ -171,10 +183,16 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   const [newAssignmentUserIds, setNewAssignmentUserIds] = useState<number[]>([]);
   const [newAssignmentMode, setNewAssignmentMode] = useState<'first' | 'shared' | 'custom'>('first');
   const [newAssignmentPercentages, setNewAssignmentPercentages] = useState<Record<number, number>>({});
+  const [newTaskOnDemand, setNewTaskOnDemand] = useState(false);
+  const [newTaskShowInDashboard, setNewTaskShowInDashboard] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('health');
   const [sortAsc, setSortAsc] = useState(true);
 
   const [adminModalTask, setAdminModalTask] = useState<Task | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templateTasks, setTemplateTasks] = useState<Array<{ name: string; translationKey?: string; iconKey?: string; frequencyDays: number; effort: number; isSeasonal?: boolean; selected: boolean }>>([]);
+  const [templateLoading, setTemplateLoading] = useState(false);
+  const [templateAdding, setTemplateAdding] = useState(false);
 
   // Initialize percentages evenly for custom mode
   const initPercentages = (userIds: number[]): Record<number, number> => {
@@ -227,8 +245,12 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
 
   const handleAdminModalConfirm = async (userIds: number[]) => {
     if (!adminModalTask) return;
-    for (const uid of userIds) {
-      await api.completeTask(adminModalTask.id, uid);
+    try {
+      for (const uid of userIds) {
+        await api.completeTask(adminModalTask.id, uid);
+      }
+    } catch (e) {
+      console.error('Failed to complete task for some users:', e);
     }
     setAdminModalTask(null);
     setAnimatedTask(adminModalTask.id);
@@ -246,7 +268,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
       assignmentPercentages[u.id] = u.coinPercentage ?? 0;
     }
     setEditingTask(task.id);
-    setEditForm({ name: task.name, notes: task.notes || '', freqValue: value, freqUnit: unit, effort: task.effort, health: task.health, iconKey: task.iconKey || 'sparkle', assignmentType, assignmentUserIds, assignmentMode: task.assignmentMode || 'first', assignmentPercentages });
+    setEditForm({ name: task.name, notes: task.notes || '', freqValue: value, freqUnit: unit, effort: task.effort, health: task.health, iconKey: task.iconKey || 'sparkle', onDemand: !!task.onDemand, showInDashboard: !!task.showInDashboard, assignmentType, assignmentUserIds, assignmentMode: task.assignmentMode || 'first', assignmentPercentages });
   };
 
   const saveEdit = async () => {
@@ -256,7 +278,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
       editForm.assignmentType === 'users' ? { assignedToChildren: false, assignedUserIds: editForm.assignmentUserIds } :
       { assignedToChildren: false, assignedUserIds: [] };
     const assignedUserPercentages = editForm.assignmentMode === 'custom' ? editForm.assignmentPercentages : undefined;
-    await api.updateTask(editingTask, { name: editForm.name, notes: editForm.notes, frequencyDays, effort: editForm.effort, health: editForm.health, iconKey: editForm.iconKey, assignmentMode: editForm.assignmentMode, assignedUserPercentages, ...assignmentPayload });
+    await api.updateTask(editingTask, { name: editForm.name, notes: editForm.notes, frequencyDays, effort: editForm.effort, health: editForm.health, iconKey: editForm.iconKey, onDemand: editForm.onDemand, showInDashboard: editForm.showInDashboard, assignmentMode: editForm.assignmentMode, assignedUserPercentages, ...assignmentPayload });
     setEditingTask(null);
     onRefresh?.();
   };
@@ -270,6 +292,17 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
           return { disabled: true, label: t('app.notAssigned') };
         }
       }
+    }
+
+    // On-demand tasks are always completeable — skip all scheduling and repetition guards
+    if (task.onDemand) {
+      return { disabled: false, label: t('roomDetail.done') };
+    }
+
+    // Block if task frequency cooldown hasn't elapsed (health > 0 means not yet due)
+    if (task.health > 0 && task.lastCompletedAt) {
+      const { text } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language);
+      return { disabled: true, label: text };
     }
 
     if (task.assignmentMode === 'shared' || task.assignmentMode === 'custom') {
@@ -293,6 +326,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   }
 
   const deleteTask = async (taskId: number) => {
+    if (!window.confirm(t('roomDetail.deleteTaskConfirm'))) return;
     await api.deleteTask(taskId);
     setEditingTask(null);
     onRefresh?.();
@@ -312,6 +346,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
       effort: newTaskEffort,
       health: newTaskHealth,
       iconKey: newTaskIconKey,
+      onDemand: newTaskOnDemand,
+      showInDashboard: newTaskShowInDashboard,
       assignmentMode: newAssignmentMode,
       assignedUserPercentages,
       ...assignmentPayload,
@@ -327,6 +363,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
     setNewAssignmentUserIds([]);
     setNewAssignmentMode('first');
     setNewAssignmentPercentages({});
+    setNewTaskOnDemand(false);
+    setNewTaskShowInDashboard(false);
     setShowAddTask(false);
     onRefresh?.();
   };
@@ -351,14 +389,13 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
           <h2 style={{ fontSize: 24, fontWeight: 900, color: 'var(--warm-text)', margin: '0 0 4px' }}>{roomDisplayName(room.name, room.roomType)}</h2>
           <div style={{ fontSize: 13, color: 'var(--warm-text-muted)', fontWeight: 600 }}>{room.tasks.length} {t('rooms.tasksTracked')}</div>
         </div>
-        <button onClick={onBack} className="tq-btn tq-btn-secondary"
-          style={{ padding: '8px 18px', fontSize: 13 }}>
+        <button onClick={onBack} className="tq-btn tq-btn-secondary tq-btn-md">
           <BackIcon /> {t('rooms.backToRooms')}
         </button>
       </div>
 
       {/* Task Table */}
-      <div className="tq-card" style={{ padding: 22 }}>
+      <div className="tq-card tq-card-padded">
         <div className="room-table-scroll room-detail-scroll">
         {/* Column Headers (sortable) */}
         <div className="room-table-header" style={{
@@ -388,11 +425,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                     <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 70 }}>{t('roomDetail.name')}</label>
                     <input value={editForm.name}
                       onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
-                      style={{
-                        flex: 1, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--warm-border)',
-                        fontSize: 13, fontFamily: 'Nunito', fontWeight: 700, color: 'var(--warm-text)',
-                        outline: 'none', backgroundColor: 'var(--warm-bg-input)',
-                      }} />
+                      className="tq-input"
+                      style={{ flex: 1, fontWeight: 700 }} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 70 }}>{t('roomDetail.notes')}</label>
@@ -401,20 +435,29 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                       onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
                       placeholder={t('roomDetail.optionalNotes')}
                       rows={2}
-                      style={{
-                        flex: 1, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--warm-border)',
-                        fontSize: 12, fontFamily: 'Nunito', fontWeight: 600, color: 'var(--warm-text)',
-                        outline: 'none', backgroundColor: 'var(--warm-bg-input)', resize: 'vertical',
-                      }}
+                      className="tq-input"
+                      style={{ flex: 1, resize: 'vertical' }}
                     />
                   </div>
                   <div className="task-edit-form" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.onDemand')}</label>
+                      <input type="checkbox" checked={editForm.onDemand}
+                        onChange={(e) => setEditForm(f => ({ ...f, onDemand: e.target.checked }))}
+                        style={{ cursor: 'pointer', width: 16, height: 16, accentColor: 'var(--warm-accent)' }} />
+                    </div>
+                    {editForm.onDemand && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.showInDashboard')}</label>
+                      <input type="checkbox" checked={editForm.showInDashboard}
+                        onChange={(e) => setEditForm(f => ({ ...f, showInDashboard: e.target.checked }))}
+                        style={{ cursor: 'pointer', width: 16, height: 16, accentColor: 'var(--warm-accent)' }} />
+                    </div>}
+                    {!editForm.onDemand && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.every')}</label>
                       <FrequencyPicker value={editForm.freqValue} unit={editForm.freqUnit}
                         t={t}
                         onChange={(v, u) => setEditForm(f => ({ ...f, freqValue: v, freqUnit: u }))} />
-                    </div>
+                    </div>}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.effort')}</label>
                       <EffortPicker effort={editForm.effort} onChange={(e) => setEditForm(f => ({ ...f, effort: e }))} />
@@ -447,7 +490,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                     <select
                       value={editForm.iconKey}
                       onChange={(e) => setEditForm((f) => ({ ...f, iconKey: e.target.value }))}
-                      style={{ padding: '5px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)', fontFamily: 'Nunito', fontSize: 11 }}
+                      className="tq-input-compact"
                     >
                       {TASK_ICON_OPTIONS.map((opt) => (
                         <option key={opt.key} value={opt.key}>{t(`taskIcons.${opt.key}`)}</option>
@@ -458,15 +501,12 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                   {!room.assignedUserId && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 58 }}>{t('rooms.assignRoom')}</label>
+                        <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 58 }}>{t('rooms.assignTask')}</label>
                         <select
                           value={editForm.assignmentType}
                           onChange={(e) => setEditForm(f => ({ ...f, assignmentType: e.target.value as 'none' | 'users', assignmentUserIds: [], assignmentMode: 'first' }))}
-                          style={{
-                            padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--warm-border)',
-                            fontSize: 12, fontFamily: 'Nunito', fontWeight: 600, color: 'var(--warm-text)',
-                            backgroundColor: 'var(--warm-bg-input)', outline: 'none', cursor: 'pointer',
-                          }}
+                          className="tq-input-compact"
+                          style={{ cursor: 'pointer' }}
                         >
                           <option value="none">{t('rooms.noAssignment')}</option>
                           <option value="users">{t('rooms.specificUsers')}</option>
@@ -549,7 +589,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                                             max={100}
                                             value={editForm.assignmentPercentages[uid] ?? 0}
                                             onChange={(e) => setEditForm(f => ({ ...f, assignmentPercentages: { ...f.assignmentPercentages, [uid]: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) } }))}
-                                            style={{ width: 52, padding: '4px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)', fontSize: 12, fontFamily: 'Nunito', fontWeight: 700, textAlign: 'center', backgroundColor: 'var(--warm-bg-input)', color: 'var(--warm-text)' }}
+                                            className="tq-input-compact"
+                                            style={{ width: 52, textAlign: 'center', fontWeight: 700 }}
                                           />
                                           <span style={{ fontSize: 12, color: 'var(--warm-text-light)' }}>%</span>
                                         </div>
@@ -575,16 +616,16 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                     return (
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
                         <button onClick={() => deleteTask(task.id)}
+                          className="tq-btn-sm"
                           style={{
                             background: 'none', border: '1.5px solid var(--warm-danger-border)', borderRadius: 10,
-                            padding: '6px 14px', fontSize: 11, fontWeight: 700, color: 'var(--warm-danger)',
+                            fontWeight: 700, color: 'var(--warm-danger)',
                             cursor: 'pointer', fontFamily: 'Nunito',
                           }}>{t('roomDetail.deleteTask')}</button>
                         <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => setEditingTask(null)} className="tq-btn tq-btn-secondary"
-                            style={{ padding: '6px 16px', fontSize: 12 }}>{t('common.cancel')}</button>
-                          <button onClick={saveEdit} disabled={editSaveDisabled} className="tq-btn tq-btn-primary"
-                            style={{ padding: '6px 16px', fontSize: 12, opacity: editSaveDisabled ? 0.5 : 1 }}>{t('common.save')}</button>
+                          <button onClick={() => setEditingTask(null)} className="tq-btn tq-btn-secondary tq-btn-sm">{t('common.cancel')}</button>
+                          <button onClick={saveEdit} disabled={editSaveDisabled} className="tq-btn tq-btn-primary tq-btn-sm"
+                            style={{ opacity: editSaveDisabled ? 0.5 : 1 }}>{t('common.save')}</button>
                         </div>
                       </div>
                     );
@@ -620,19 +661,27 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                       </div>
                     )}
                     <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600 }}>
-                      {timeAgo(task.lastCompletedAt)}{task.isSeasonal ? ` · ${t('roomDetail.seasonal')}` : ''}
+                      {timeAgo(task.lastCompletedAt)}{task.isSeasonal ? ` · ${t('roomDetail.seasonal')}` : ''}{task.onDemand ? ` · ${t('roomDetail.onDemand')}` : ''}
                     </div>
                   </div>
                 </div>
                 <div className="room-task-health"><HealthBar value={animatedTask === task.id ? 100 : task.health} height={8} animate={animatedTask === task.id} /></div>
-                <div className="room-task-frequency" style={{ fontSize: 13, color: 'var(--warm-text-secondary)', fontWeight: 600 }}>{t('roomDetail.every')} {formatFreq(task.frequencyDays, t)}</div>
+                <div className="room-task-frequency" style={{ fontSize: 13, color: 'var(--warm-text-secondary)', fontWeight: 600 }}>
+                  {task.onDemand
+                    ? <span style={{ color: 'var(--warm-accent)', fontWeight: 700 }}>{t('roomDetail.onDemand')}</span>
+                    : <>{t('roomDetail.every')} {formatFreq(task.frequencyDays, t)}</>
+                  }
+                </div>
                 <div className="room-task-effort"><EffortDots effort={task.effort} /></div>
                 <div className="room-task-coins" style={{ fontSize: 12, fontWeight: 800, color: 'var(--warm-accent)', display: 'flex', alignItems: 'center', gap: 3 }}>
                   <CoinIcon />{coinsByEffort?.[task.effort] ?? task.effort * 5}
                 </div>
-                {(() => { const { text, color } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language); return (
-                  <div className="room-task-due" style={{ fontSize: 12, fontWeight: 700, color }}>{text}</div>
-                ); })()}
+                {task.onDemand
+                  ? <div className="room-task-due" style={{ fontSize: 12, fontWeight: 700, color: 'var(--warm-text-light)' }}>—</div>
+                  : (() => { const { text, color } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language); return (
+                      <div className="room-task-due" style={{ fontSize: 12, fontWeight: 700, color }}>{text}</div>
+                    ); })()
+                }
                 <div className="room-task-assigned" style={{ fontSize: 12, color: 'var(--warm-text-secondary)', fontWeight: 600 }}>
                   {task.assignedUsers && task.assignedUsers.length > 0
                     ? <span>
@@ -660,15 +709,17 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                   {isAdmin && (
                     <>
                       <button onClick={() => startEdit(task)}
+                        className="tq-btn-sm"
                         style={{
                           background: 'none', border: '1.5px solid var(--warm-border)', borderRadius: 10,
-                          padding: '6px 10px', fontSize: 11, fontWeight: 700, color: 'var(--warm-text-muted)',
+                          fontWeight: 700, color: 'var(--warm-text-muted)',
                           cursor: 'pointer', fontFamily: 'Nunito',
                         }}>{t('common.edit')}</button>
                       <button onClick={() => deleteTask(task.id)}
+                        className="tq-btn-sm"
                         style={{
                           background: 'none', border: '1.5px solid var(--warm-danger-border)', borderRadius: 10,
-                          padding: '6px 10px', fontSize: 11, fontWeight: 700, color: 'var(--warm-danger)',
+                          fontWeight: 700, color: 'var(--warm-danger)',
                           cursor: 'pointer', fontFamily: 'Nunito',
                         }}>&times;</button>
                     </>
@@ -680,9 +731,10 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                         onRefresh?.();
                       }}
                       title={t('roomDetail.reset')}
+                      className="tq-btn-sm"
                       style={{
                         background: 'none', border: '1.5px solid var(--warm-border)', borderRadius: 10,
-                        padding: '6px 8px', fontSize: 13, cursor: 'pointer', fontFamily: 'Nunito',
+                        cursor: 'pointer', fontFamily: 'Nunito',
                       }}
                     >🔄</button>
                   )}
@@ -692,9 +744,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                       <button
                         onClick={() => !btn.disabled && handleComplete(task)}
                         disabled={btn.disabled}
-                        className={btn.disabled ? 'tq-btn' : 'tq-btn tq-btn-primary'}
+                        className={btn.disabled ? 'tq-btn tq-btn-sm' : 'tq-btn tq-btn-primary tq-btn-sm'}
                         style={{
-                          padding: '6px 14px', fontSize: 12,
                           ...(btn.disabled ? {
                             opacity: 0.55, cursor: 'default',
                             backgroundColor: 'var(--warm-bg-subtle)',
@@ -727,11 +778,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                   onChange={(e) => setNewTaskName(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addTask()}
                   placeholder={t('roomDetail.taskName')}
-                  style={{
-                    flex: 1, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--warm-border)',
-                    fontSize: 13, fontFamily: 'Nunito', fontWeight: 700, color: 'var(--warm-text)',
-                    outline: 'none', backgroundColor: 'var(--warm-bg-input)',
-                  }} />
+                  className="tq-input"
+                  style={{ flex: 1, fontWeight: 700 }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 70 }}>{t('roomDetail.notes')}</label>
@@ -739,19 +787,28 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                   onChange={(e) => setNewTaskNotes(e.target.value)}
                   placeholder={t('roomDetail.optionalNotes')}
                   rows={2}
-                  style={{
-                    flex: 1, padding: '8px 12px', borderRadius: 10, border: '1.5px solid var(--warm-border)',
-                    fontSize: 12, fontFamily: 'Nunito', fontWeight: 600, color: 'var(--warm-text)',
-                    outline: 'none', backgroundColor: 'var(--warm-bg-input)', resize: 'vertical',
-                  }} />
+                  className="tq-input"
+                  style={{ flex: 1, resize: 'vertical' }} />
               </div>
               <div className="task-add-form" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.onDemand')}</label>
+                  <input type="checkbox" checked={newTaskOnDemand}
+                    onChange={(e) => setNewTaskOnDemand(e.target.checked)}
+                    style={{ cursor: 'pointer', width: 16, height: 16, accentColor: 'var(--warm-accent)' }} />
+                </div>
+                {newTaskOnDemand && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.showInDashboard')}</label>
+                  <input type="checkbox" checked={newTaskShowInDashboard}
+                    onChange={(e) => setNewTaskShowInDashboard(e.target.checked)}
+                    style={{ cursor: 'pointer', width: 16, height: 16, accentColor: 'var(--warm-accent)' }} />
+                </div>}
+                {!newTaskOnDemand && <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.every')}</label>
                   <FrequencyPicker value={newFreqValue} unit={newFreqUnit}
                     t={t}
                     onChange={(v, u) => { setNewFreqValue(v); setNewFreqUnit(u); }} />
-                </div>
+                </div>}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.effort')}</label>
                   <EffortPicker effort={newTaskEffort} onChange={setNewTaskEffort} />
@@ -784,7 +841,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                 <select
                   value={newTaskIconKey}
                   onChange={(e) => setNewTaskIconKey(e.target.value)}
-                  style={{ padding: '5px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)', fontFamily: 'Nunito', fontSize: 11 }}
+                  className="tq-input-compact"
                 >
                   {TASK_ICON_OPTIONS.map((opt) => (
                     <option key={opt.key} value={opt.key}>{t(`taskIcons.${opt.key}`)}</option>
@@ -798,11 +855,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                     <select
                       value={newAssignmentType}
                       onChange={(e) => { setNewAssignmentType(e.target.value as 'none' | 'users'); setNewAssignmentUserIds([]); setNewAssignmentMode('first'); }}
-                      style={{
-                        padding: '6px 10px', borderRadius: 8, border: '1.5px solid var(--warm-border)',
-                        fontSize: 12, fontFamily: 'Nunito', fontWeight: 600, color: 'var(--warm-text)',
-                        backgroundColor: 'var(--warm-bg-input)', outline: 'none', cursor: 'pointer',
-                      }}
+                      className="tq-input-compact"
+                      style={{ cursor: 'pointer' }}
                     >
                       <option value="none">{t('rooms.noAssignment')}</option>
                       <option value="users">{t('rooms.specificUsers')}</option>
@@ -882,7 +936,8 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                                         max={100}
                                         value={newAssignmentPercentages[uid] ?? 0}
                                         onChange={(e) => setNewAssignmentPercentages(p => ({ ...p, [uid]: Math.max(0, Math.min(100, parseInt(e.target.value) || 0)) }))}
-                                        style={{ width: 52, padding: '4px 8px', borderRadius: 8, border: '1.5px solid var(--warm-border)', fontSize: 12, fontFamily: 'Nunito', fontWeight: 700, textAlign: 'center', backgroundColor: 'var(--warm-bg-input)', color: 'var(--warm-text)' }}
+                                        className="tq-input-compact"
+                                        style={{ width: 52, textAlign: 'center', fontWeight: 700 }}
                                       />
                                       <span style={{ fontSize: 12, color: 'var(--warm-text-light)' }}>%</span>
                                     </div>
@@ -908,24 +963,46 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                 return (
                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                     <button onClick={() => { setShowAddTask(false); setNewTaskName(''); setNewTaskNotes(''); setNewTaskHealth(100); setNewTaskIconKey('sparkle'); setNewAssignmentType('none'); setNewAssignmentUserIds([]); setNewAssignmentMode('first'); setNewAssignmentPercentages({}); }}
-                      className="tq-btn tq-btn-secondary" style={{ padding: '6px 16px', fontSize: 12 }}>{t('common.cancel')}</button>
-                    <button onClick={addTask} disabled={addSaveDisabled} className="tq-btn tq-btn-primary"
-                      style={{ padding: '6px 16px', fontSize: 12, opacity: addSaveDisabled ? 0.5 : 1 }}>{t('roomDetail.addTask')}</button>
+                      className="tq-btn tq-btn-secondary tq-btn-sm">{t('common.cancel')}</button>
+                    <button onClick={addTask} disabled={addSaveDisabled} className="tq-btn tq-btn-primary tq-btn-sm"
+                      style={{ opacity: addSaveDisabled ? 0.5 : 1 }}>{t('roomDetail.addTask')}</button>
                   </div>
                 );
               })()}
             </div>
           </div>
         ) : isAdmin ? (
-          <div style={{ padding: '14px 8px' }}>
+          <div style={{ padding: '14px 8px', display: 'flex', gap: 8 }}>
             <button onClick={() => setShowAddTask(true)}
+              className="tq-btn-md"
               style={{
                 background: 'none', border: '1.5px dashed var(--warm-border)', borderRadius: 12,
-                padding: '10px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 13, fontWeight: 700, color: 'var(--warm-text-light)', fontFamily: 'Nunito', width: '100%',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                fontWeight: 700, color: 'var(--warm-text-light)', fontFamily: 'Nunito', flex: 1,
                 justifyContent: 'center',
               }}>
               <PlusIcon /> {t('roomDetail.addTask')}
+            </button>
+            <button onClick={() => {
+              setShowTemplates(true);
+              setTemplateLoading(true);
+              api.getDefaultTasks(room.roomType).then((defaults) => {
+                const existingNames = new Set(room.tasks.map(t => t.name.toLowerCase()));
+                setTemplateTasks(defaults.map(d => ({
+                  ...d, translationKey: (d as any).translationKey, iconKey: (d as any).iconKey,
+                  selected: false,
+                })).filter(d => !existingNames.has(d.name.toLowerCase())));
+                setTemplateLoading(false);
+              }).catch(() => { setTemplateTasks([]); setTemplateLoading(false); });
+            }}
+              className="tq-btn-md"
+              style={{
+                background: 'none', border: '1.5px dashed var(--warm-border)', borderRadius: 12,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                fontWeight: 700, color: 'var(--warm-text-light)', fontFamily: 'Nunito',
+                justifyContent: 'center', padding: '0 16px',
+              }}>
+              {t('roomDetail.addFromTemplates')}
             </button>
           </div>
         ) : null}
@@ -939,6 +1016,68 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
         onConfirm={handleAdminModalConfirm}
         onClose={() => setAdminModalTask(null)}
       />
+    )}
+    {showTemplates && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}
+        onClick={(e) => { if (e.target === e.currentTarget) setShowTemplates(false); }}>
+        <div className="tq-card" style={{ padding: 24, width: 420, maxWidth: 'calc(100vw - 24px)', maxHeight: '80vh', overflow: 'auto' }}>
+          <h3 style={{ fontSize: 16, fontWeight: 800, color: 'var(--warm-text)', margin: '0 0 16px' }}>
+            {t('roomDetail.addFromTemplates')}
+          </h3>
+          {templateLoading ? (
+            <p style={{ fontSize: 13, color: 'var(--warm-text-light)', textAlign: 'center', padding: 20 }}>...</p>
+          ) : templateTasks.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--warm-text-light)', textAlign: 'center', padding: 20 }}>
+              {t('roomDetail.noTemplates')}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {templateTasks.map((tt, i) => (
+                <label key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
+                  padding: '10px 12px', borderRadius: 12,
+                  border: `1.5px solid ${tt.selected ? 'var(--warm-accent)' : 'var(--warm-border)'}`,
+                  backgroundColor: tt.selected ? 'var(--warm-accent-light)' : 'var(--warm-bg-subtle)',
+                  transition: 'all 0.15s ease',
+                }}>
+                  <input type="checkbox" checked={tt.selected}
+                    onChange={() => {
+                      setTemplateTasks(prev => prev.map((t, j) => j === i ? { ...t, selected: !t.selected } : t));
+                    }}
+                    style={{ width: 16, height: 16, accentColor: 'var(--warm-accent)', cursor: 'pointer' }} />
+                  <TaskIcon iconKey={tt.iconKey || 'sparkle'} size={20} />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--warm-text)' }}>
+                    {tt.translationKey ? translateTask(tt.translationKey, tt.name) : tt.name}
+                  </span>
+                  <EffortDots effort={tt.effort} />
+                </label>
+              ))}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+            <button className="tq-btn tq-btn-secondary" onClick={() => setShowTemplates(false)}
+              style={{ flex: 1 }}>{t('common.cancel')}</button>
+            <button className="tq-btn tq-btn-primary" disabled={templateAdding || !templateTasks.some(t => t.selected)}
+              onClick={async () => {
+                setTemplateAdding(true);
+                const selected = templateTasks.filter(t => t.selected);
+                for (const tt of selected) {
+                  await api.createTask(room.id, {
+                    name: tt.name, effort: tt.effort,
+                    frequencyDays: tt.frequencyDays,
+                    health: 100, iconKey: tt.iconKey || 'sparkle',
+                  });
+                }
+                setTemplateAdding(false);
+                setShowTemplates(false);
+                onRefresh?.();
+              }}
+              style={{ flex: 1 }}>
+              {templateAdding ? '...' : `${t('roomDetail.addTask')} (${templateTasks.filter(t => t.selected).length})`}
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

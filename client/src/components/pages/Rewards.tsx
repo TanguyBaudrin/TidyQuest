@@ -18,16 +18,28 @@ interface Redemption {
   status: string;
 }
 
+interface PendingRequest {
+  id: number;
+  title: string;
+  displayName: string;
+  costCoins: number;
+  redeemedAt: string;
+  status: string;
+}
+
 interface RewardsProps {
   language?: string;
   rewards: Reward[];
   mine: Redemption[];
   userCoins: number;
+  isAdmin?: boolean;
+  pendingRequests?: PendingRequest[];
+  onRewardRequestAction?: (id: number, status: 'approved' | 'rejected') => Promise<void>;
   onRedeem: (rewardId: number) => Promise<void>;
   onCancel: (redemptionId: number) => Promise<void>;
 }
 
-export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel }: RewardsProps) {
+export function Rewards({ language, rewards, mine, userCoins, isAdmin, pendingRequests, onRewardRequestAction, onRedeem, onCancel }: RewardsProps) {
   const { t } = useTranslation(language);
   const [pendingRewardId, setPendingRewardId] = useState<number | null>(null);
   const [spendFx, setSpendFx] = useState<{ amount: number; key: number } | null>(null);
@@ -106,9 +118,9 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
   };
 
   const statusStyle = (status: string): CSSProperties => {
-    if (status === 'approved') return { color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC' };
-    if (status === 'rejected') return { color: '#B91C1C', backgroundColor: '#FEE2E2', border: '1px solid #FCA5A5' };
-    if (status === 'cancelled') return { color: '#374151', backgroundColor: '#E5E7EB', border: '1px solid #D1D5DB' };
+    if (status === 'approved') return { color: 'var(--status-approved-text)', backgroundColor: 'var(--status-approved-bg)', border: '1px solid var(--status-approved-border)' };
+    if (status === 'rejected') return { color: 'var(--status-rejected-text)', backgroundColor: 'var(--status-rejected-bg)', border: '1px solid var(--status-rejected-border)' };
+    if (status === 'cancelled') return { color: 'var(--status-cancelled-text)', backgroundColor: 'var(--status-cancelled-bg)', border: '1px solid var(--status-cancelled-border)' };
     return { color: 'var(--warm-accent)', backgroundColor: 'var(--warm-accent-light)', border: '1px solid var(--warm-accent)' };
   };
 
@@ -126,7 +138,7 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
           100% { opacity: 0; transform: translateY(-24px) scale(1.04); }
         }
       `}</style>
-      <div className="tq-card" style={{ padding: 18 }}>
+      <div className="tq-card tq-card-padded">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CoinIcon />
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--warm-text)' }}>{userCoins} {t('settings.coins')}</div>
@@ -134,8 +146,28 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
         <div style={{ fontSize: 11, color: 'var(--warm-text-light)', fontWeight: 600, marginTop: 4 }}>{t('rewards.balanceHint')}</div>
       </div>
 
-      <div className="tq-card rewards-catalog-card" style={{ padding: 20 }}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: 'var(--warm-text)' }}>{t('rewards.catalog')}</h3>
+      {isAdmin && pendingRequests && pendingRequests.filter(r => r.status === 'requested').length > 0 && (
+        <div className="tq-card tq-card-padded">
+          <h3 className="tq-card-title">{t('dashboard.rewardRequestsTitle')}</h3>
+          <div style={{ display: 'grid', gap: 8 }}>
+            {pendingRequests.filter(r => r.status === 'requested').map((r) => (
+              <div key={r.id} style={{ border: '1.5px solid var(--warm-border)', borderRadius: 12, padding: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--warm-text)' }}>{r.displayName} — {rewardTitleByName(r.title)}</div>
+                  <div style={{ fontSize: 10, color: 'var(--warm-text-light)', fontWeight: 700 }}>{new Date(r.redeemedAt).toLocaleString()} · {r.costCoins} coins</div>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="tq-btn tq-btn-primary tq-btn-sm" onClick={() => onRewardRequestAction?.(r.id, 'approved')}>{t('dashboard.approve')}</button>
+                  <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={() => onRewardRequestAction?.(r.id, 'rejected')}>{t('dashboard.reject')}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="tq-card rewards-catalog-card tq-card-padded">
+        <h3 className="tq-card-title">{t('rewards.catalog')}</h3>
         <div className="rewards-catalog-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10 }}>
           {rewards.map((r) => {
             const canBuy = userCoins >= r.costCoins;
@@ -148,8 +180,8 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
                     <CoinIcon /> {r.costCoins}
                   </div>
                   <button
-                    className="tq-btn tq-btn-primary"
-                    style={{ padding: '6px 10px', fontSize: 11, opacity: canBuy ? 1 : 0.6 }}
+                    className="tq-btn tq-btn-primary tq-btn-sm"
+                    style={{ opacity: canBuy ? 1 : 0.6 }}
                     disabled={!canBuy}
                     onClick={() => setPendingRewardId(r.id)}
                   >
@@ -162,10 +194,10 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
         </div>
       </div>
 
-      <div className="tq-card" style={{ padding: 20 }}>
-        <h3 style={{ margin: '0 0 10px', fontSize: 16, fontWeight: 900, color: 'var(--warm-text)' }}>{t('rewards.myRequests')}</h3>
+      <div className="tq-card tq-card-padded">
+        <h3 className="tq-card-title">{t('rewards.myRequests')}</h3>
         {mine.length === 0 ? (
-          <div style={{ fontSize: 12, color: 'var(--warm-text-light)', fontWeight: 600 }}>{t('rewards.noRequests')}</div>
+          <div className="tq-empty-state" style={{ padding: '16px 0' }}>{t('rewards.noRequests')}</div>
         ) : (
           <div style={{ display: 'grid', gap: 8 }}>
             {mine.map((m) => (
@@ -191,15 +223,15 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
         )}
       </div>
       {pendingReward && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 120, backgroundColor: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="tq-card rewards-confirm-modal" style={{ width: 380, maxWidth: 'calc(100vw - 24px)', padding: 20 }}>
+        <div className="tq-modal-overlay" style={{ zIndex: 120 }}>
+          <div className="tq-card rewards-confirm-modal tq-modal tq-modal-narrow tq-card-padded">
             <div style={{ fontSize: 16, fontWeight: 900, color: 'var(--warm-text)', marginBottom: 6 }}>{t('rewards.confirmTitle')}</div>
             <div style={{ fontSize: 12, color: 'var(--warm-text-light)', fontWeight: 600, marginBottom: 14 }}>
               {t('rewards.confirmText').replace('{reward}', rewardTitle(pendingReward)).replace('{coins}', String(pendingReward.costCoins))}
             </div>
             <div className="rewards-confirm-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-              <button className="tq-btn tq-btn-secondary" onClick={() => setPendingRewardId(null)} style={{ padding: '6px 12px', fontSize: 12 }}>{t('common.cancel')}</button>
-              <button className="tq-btn tq-btn-primary" onClick={confirmRedeem} style={{ padding: '6px 12px', fontSize: 12 }}>{t('rewards.confirmBuy')}</button>
+              <button className="tq-btn tq-btn-secondary tq-btn-sm" onClick={() => setPendingRewardId(null)}>{t('common.cancel')}</button>
+              <button className="tq-btn tq-btn-primary tq-btn-sm" onClick={confirmRedeem}>{t('rewards.confirmBuy')}</button>
             </div>
           </div>
         </div>
@@ -210,7 +242,7 @@ export function Rewards({ language, rewards, mine, userCoins, onRedeem, onCancel
         </div>
       )}
       {refundFx && (
-        <div key={refundFx.key} style={{ position: 'fixed', top: 126, right: 80, zIndex: 121, animation: 'coinRefundFloat 1.7s ease forwards', backgroundColor: '#DCFCE7', border: '1.5px solid #16A34A', borderRadius: 14, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 900, color: '#166534' }}>
+        <div key={refundFx.key} style={{ position: 'fixed', top: 126, right: 80, zIndex: 121, animation: 'coinRefundFloat 1.7s ease forwards', backgroundColor: 'var(--status-approved-bg)', border: '1.5px solid var(--status-approved-border)', borderRadius: 14, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 900, color: 'var(--status-approved-text)' }}>
           +{refundFx.amount} <CoinIcon />
         </div>
       )}

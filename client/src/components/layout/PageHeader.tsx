@@ -1,4 +1,4 @@
-import { FireIcon, CoinIcon } from '../icons/UIIcons';
+import { FireIcon, CoinIcon, PointsIcon } from '../icons/UIIcons';
 import type { User } from '../../hooks/useAuth';
 
 interface PageHeaderProps {
@@ -8,9 +8,13 @@ interface PageHeaderProps {
   rightContent?: React.ReactNode;
   onCoinsClick?: () => void;
   onStreakClick?: () => void;
+  onPointsClick?: () => void;
+  userPoints?: number;
+  pointsPeriodLabel?: string;
+  gamificationEnabled?: boolean;
 }
 
-export function PageHeader({ title, subtitle, user, rightContent, onCoinsClick, onStreakClick }: PageHeaderProps) {
+export function PageHeader({ title, subtitle, user, rightContent, onCoinsClick, onStreakClick, onPointsClick, userPoints, pointsPeriodLabel, gamificationEnabled = true }: PageHeaderProps) {
   return (
     <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
       <div>
@@ -23,6 +27,8 @@ export function PageHeader({ title, subtitle, user, rightContent, onCoinsClick, 
       </div>
       <div className="page-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
         {rightContent}
+        {gamificationEnabled && (
+        <>
         <div
           onClick={onStreakClick}
           role={onStreakClick ? 'button' : undefined}
@@ -63,6 +69,31 @@ export function PageHeader({ title, subtitle, user, rightContent, onCoinsClick, 
           <CoinIcon />
           <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--warm-streak-text)' }}>{user.coins}</span>
         </div>
+        <div
+          onClick={onPointsClick}
+          role={onPointsClick ? 'button' : undefined}
+          tabIndex={onPointsClick ? 0 : -1}
+          onKeyDown={(e) => {
+            if (!onPointsClick) return;
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onPointsClick();
+            }
+          }}
+          style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          backgroundColor: 'var(--warm-accent-light)', borderRadius: 14, padding: '8px 16px',
+          border: '1.5px solid var(--warm-streak-border)',
+          cursor: onPointsClick ? 'pointer' : 'default',
+        }}>
+          <PointsIcon />
+          <span style={{ fontSize: 15, fontWeight: 800, color: 'var(--warm-streak-text)' }}>{userPoints ?? user.points}</span>
+          {pointsPeriodLabel && (
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--warm-text-light)', textTransform: 'uppercase' }}>{pointsPeriodLabel}</span>
+          )}
+        </div>
+        </>
+        )}
       </div>
     </div>
   );

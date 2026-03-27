@@ -3,7 +3,7 @@ import { useTranslation } from '../../hooks/useTranslation';
 
 interface CalendarProps {
   completions: Array<{ completedAt: string; taskName: string; translationKey?: string; roomName: string }>;
-  tasks: Array<{ id: number; name: string; translationKey?: string; roomName: string; roomType: string; health: number; frequencyDays: number; lastCompletedAt: string | null; iconKey?: string }>;
+  tasks: Array<{ id: number; name: string; translationKey?: string; roomName: string; roomType: string; health: number; frequencyDays: number; lastCompletedAt: string | null; iconKey?: string; onDemand?: boolean }>;
   language?: string;
 }
 
@@ -36,11 +36,11 @@ export function Calendar({ completions, tasks, language }: CalendarProps) {
         dueDate.setDate(dueDate.getDate() + task.frequencyDays);
       }
       const dueInDays = task.lastCompletedAt
-        ? Math.max(0, Math.ceil((dueDate.getTime() - Date.now()) / 86400000))
+        ? Math.max(0, Math.floor((dueDate.getTime() - Date.now()) / 86400000))
         : 0;
       return { ...task, dueInDays, dueDate };
     })
-    .filter((task) => task.dueInDays <= 30)
+    .filter((task) => !task.onDemand && task.dueInDays <= 30)
     .sort((a, b) => a.dueInDays - b.dueInDays);
 
   // Days with due tasks
@@ -59,7 +59,7 @@ export function Calendar({ completions, tasks, language }: CalendarProps) {
   return (
     <div className="page-enter calendar-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20 }}>
       {/* Calendar Grid */}
-      <div className="tq-card" style={{ padding: 28 }}>
+      <div className="tq-card tq-card-padded">
         <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--warm-text)', textAlign: 'center', marginBottom: 20 }}>{monthName}</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center' }}>
           {[
@@ -107,7 +107,7 @@ export function Calendar({ completions, tasks, language }: CalendarProps) {
       </div>
 
       {/* Upcoming Due Dates */}
-      <div className="tq-card calendar-sidebar" style={{ padding: 20 }}>
+      <div className="tq-card calendar-sidebar tq-card-padded">
         <h3 style={{ fontSize: 15, fontWeight: 800, color: 'var(--warm-text)', margin: '0 0 14px' }}>{t('calendar.upcomingDueDates')}</h3>
         {upcoming.slice(0, 8).map((item, i) => {
           return (
@@ -133,7 +133,7 @@ export function Calendar({ completions, tasks, language }: CalendarProps) {
           );
         })}
         {upcoming.length === 0 && (
-          <div style={{ padding: 20, textAlign: 'center', color: 'var(--warm-text-light)', fontSize: 13, fontWeight: 600 }}>
+          <div className="tq-empty-state">
             {t('calendar.allCaughtUp')}
           </div>
         )}

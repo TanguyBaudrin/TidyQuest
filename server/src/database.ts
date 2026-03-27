@@ -1,14 +1,40 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import fs from 'fs';
+import bcrypt from 'bcryptjs';
 import { suggestTaskIcon } from './utils/taskIcons';
 
 const DB_PATH = path.join(__dirname, '..', '..', 'data', 'tidyquest.db');
 
-const db = new Database(DB_PATH);
+export function createDatabase(dbPath: string = DB_PATH): InstanceType<typeof Database> {
+  const dir = path.dirname(dbPath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  const instance = new Database(dbPath);
+  instance.pragma('journal_mode = WAL');
+  instance.pragma('foreign_keys = ON');
+  return instance;
+}
 
-// Enable WAL mode for better concurrent read performance
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+let _db: InstanceType<typeof Database> | null = process.env.VITEST ? null : createDatabase();
+
+export function setDatabase(instance: InstanceType<typeof Database>) {
+  _db = instance;
+}
+
+// Proxy so that route files importing `db` always reach the current _db instance.
+// This allows tests to swap the DB via setDatabase() without module mocking.
+const db = new Proxy({} as InstanceType<typeof Database>, {
+  get(_target, prop: string | symbol) {
+    if (!_db) throw new Error('Database not initialised — call setDatabase() first');
+    const value = (_db as any)[prop];
+    if (typeof value === 'function') {
+      return value.bind(_db);
+    }
+    return value;
+  },
+});
 
 export function initDatabase() {
   db.exec(`
@@ -58,8 +84,12 @@ export function initDatabase() {
       userId INTEGER NOT NULL,
       completedAt TEXT NOT NULL DEFAULT (datetime('now')),
       coinsEarned INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'approved',
+      approvedByUserId INTEGER,
+      approvedAt TEXT,
       FOREIGN KEY (taskId) REFERENCES tasks(id) ON DELETE CASCADE,
-      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (approvedByUserId) REFERENCES users(id) ON DELETE SET NULL
     );
 
     CREATE TABLE IF NOT EXISTS task_due_notifications (
@@ -159,6 +189,12 @@ export function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN assignedUserId INTEGER REFERENCES users(id) ON DELETE SET NULL`,
     `ALTER TABLE tasks ADD COLUMN assignmentMode TEXT NOT NULL DEFAULT 'first'`,
     `ALTER TABLE task_assignees ADD COLUMN coinPercentage INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE task_completions ADD COLUMN status TEXT NOT NULL DEFAULT 'approved'`,
+    `ALTER TABLE task_completions ADD COLUMN approvedByUserId INTEGER REFERENCES users(id) ON DELETE SET NULL`,
+    `ALTER TABLE task_completions ADD COLUMN approvedAt TEXT`,
+    `ALTER TABLE users ADD COLUMN vacationEndDate TEXT`,
+    `ALTER TABLE tasks ADD COLUMN onDemand INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN showInDashboard INTEGER NOT NULL DEFAULT 0`,
   ];
 
   for (const sql of migrations) {
@@ -171,6 +207,8 @@ export function initDatabase() {
       }
     }
   }
+
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_task_completions_status ON task_completions(status);`);
 
   // One-time migration: populate task_assignees from legacy tasks.assignedUserId
   const migratedAssignees = db.prepare("SELECT value FROM app_settings WHERE key = 'taskAssigneesMigrated_v1'").get() as any;
@@ -328,27 +366,48 @@ export function initDatabase() {
   db.prepare(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('coinsByEffort', ?)"
   ).run(JSON.stringify({ 1: 5, 2: 10, 3: 15, 4: 20, 5: 25 }));
+  // Notification settings — master toggle + per-provider sub-toggles
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notificationsEnabled', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notificationTime', '09:00')").run();
   db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramEnabled', '0')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramBotToken', '')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramChatId', '')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramNotificationTime', '09:00')"
-  ).run();
-  db.prepare(
-    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramNotificationTypes', ?)"
+    "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notificationTypes', ?)"
   ).run(JSON.stringify({ taskDue: true, rewardRequest: true, achievementUnlocked: true }));
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramEnabled', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramBotToken', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('telegramChatId', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyEnabled', '0')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyServerUrl', 'https://ntfy.sh')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyTopic', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('ntfyToken', '')").run();
+
+  // One-shot migration: promote old telegram/ntfy settings to new master toggle
+  const notifMigrated = (db.prepare("SELECT value FROM app_settings WHERE key = 'notifMasterMigrated_v1'").get() as any)?.value;
+  if (!notifMigrated) {
+    const oldTgEnabled = (db.prepare("SELECT value FROM app_settings WHERE key = 'telegramEnabled'").get() as any)?.value === '1';
+    const oldNtfyEnabled = (db.prepare("SELECT value FROM app_settings WHERE key = 'ntfyEnabled'").get() as any)?.value === '1';
+    if (oldTgEnabled || oldNtfyEnabled) {
+      db.prepare("UPDATE app_settings SET value = '1' WHERE key = 'notificationsEnabled'").run();
+    }
+    // Migrate telegramNotificationTime → notificationTime
+    const oldTime = (db.prepare("SELECT value FROM app_settings WHERE key = 'telegramNotificationTime'").get() as any)?.value;
+    if (oldTime) {
+      db.prepare("UPDATE app_settings SET value = ? WHERE key = 'notificationTime'").run(oldTime);
+    }
+    // Migrate telegramNotificationTypes → notificationTypes
+    const oldTypes = (db.prepare("SELECT value FROM app_settings WHERE key = 'telegramNotificationTypes'").get() as any)?.value;
+    if (oldTypes) {
+      db.prepare("UPDATE app_settings SET value = ? WHERE key = 'notificationTypes'").run(oldTypes);
+    }
+    db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('notifMasterMigrated_v1', '1')").run();
+  }
   db.prepare(
     "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('registrationEnabled', '1')"
   ).run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('gamificationEnabled', '1')").run();
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('vacationMode', '0')").run();
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('vacationStartDate', '')").run();
   db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('vacationEndDate', '')").run();
+  db.prepare("INSERT OR IGNORE INTO app_settings (key, value) VALUES ('strictMode', '0')").run();
 
   const rewardCount = (db.prepare('SELECT COUNT(*) as count FROM rewards').get() as { count: number }).count;
   if (rewardCount === 0) {
@@ -378,6 +437,19 @@ export function initDatabase() {
     if (firstUser) {
       db.prepare("UPDATE users SET role = 'admin' WHERE id = ?").run(firstUser.id);
     }
+  }
+
+  // Emergency admin password recovery via environment variable
+  const resetPassword = process.env.ADMIN_RESET_PASSWORD;
+  if (resetPassword) {
+    const admin = db.prepare("SELECT id, username FROM users WHERE role = 'admin' ORDER BY id ASC LIMIT 1").get() as { id: number; username: string } | undefined;
+    if (admin) {
+      const hash = bcrypt.hashSync(resetPassword, 10);
+      db.prepare('UPDATE users SET passwordHash = ? WHERE id = ?').run(hash, admin.id);
+      console.log(`[RECOVERY] Password reset for admin "${admin.username}". Remove ADMIN_RESET_PASSWORD from your environment now.`);
+    }
+    // Clear from process memory to prevent re-use on hot-reload and reduce exposure
+    delete process.env.ADMIN_RESET_PASSWORD;
   }
 }
 

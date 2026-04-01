@@ -195,6 +195,8 @@ export function initDatabase() {
     `ALTER TABLE users ADD COLUMN vacationEndDate TEXT`,
     `ALTER TABLE tasks ADD COLUMN onDemand INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN showInDashboard INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE user_goals ADD COLUMN status TEXT NOT NULL DEFAULT 'active'`,
+    `ALTER TABLE user_goals ADD COLUMN completedAt TEXT`,
   ];
 
   for (const sql of migrations) {

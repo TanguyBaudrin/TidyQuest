@@ -45,10 +45,27 @@ function readNotificationTypesSetting(): NotificationTypeSettings {
 
 function syncPrimaryGoal(userId: number) {
   const nowIso = new Date().toISOString();
+
+  // Auto-complete any active goals where coins >= target
+  const activeGoals = db.prepare(
+    `SELECT id, goalCoins, startAt, endAt FROM user_goals WHERE userId = ? AND status = 'active'`
+  ).all(userId) as { id: number; goalCoins: number; startAt: string | null; endAt: string | null }[];
+  for (const g of activeGoals) {
+    const from = g.startAt || '1970-01-01T00:00:00.000Z';
+    const to = g.endAt || '9999-12-31T23:59:59.999Z';
+    const row = db.prepare(
+      "SELECT COALESCE(SUM(coinsEarned), 0) as total FROM task_completions WHERE userId = ? AND status = 'approved' AND completedAt >= ? AND completedAt <= ?"
+    ).get(userId, from, to) as { total: number };
+    if (row.total >= g.goalCoins) {
+      db.prepare("UPDATE user_goals SET status = 'completed', completedAt = ? WHERE id = ?").run(nowIso, g.id);
+    }
+  }
+
+  // Find the next active goal to sync as primary
   const primary = db.prepare(
     `SELECT goalCoins, startAt, endAt
      FROM user_goals
-     WHERE userId = ?
+     WHERE userId = ? AND status = 'active'
      ORDER BY
        CASE
          WHEN (startAt IS NULL OR startAt <= ?) AND (endAt IS NULL OR endAt >= ?) THEN 0
@@ -401,7 +418,7 @@ router.get('/:id/goals', (req: AuthRequest, res: Response) => {
   if (!target) return res.status(404).json({ error: 'User not found' });
 
   const goals = db.prepare(
-    'SELECT id, userId, title, goalCoins, startAt, endAt, createdBy, createdAt FROM user_goals WHERE userId = ? ORDER BY createdAt DESC, id DESC'
+    'SELECT id, userId, title, goalCoins, startAt, endAt, status, completedAt, createdBy, createdAt FROM user_goals WHERE userId = ? ORDER BY createdAt DESC, id DESC'
   ).all(targetId);
   res.json(goals);
 });
@@ -433,7 +450,7 @@ router.post('/:id/goals', (req: AuthRequest, res: Response) => {
 
   syncPrimaryGoal(targetId);
   const created = db.prepare(
-    'SELECT id, userId, title, goalCoins, startAt, endAt, createdBy, createdAt FROM user_goals WHERE id = ?'
+    'SELECT id, userId, title, goalCoins, startAt, endAt, status, completedAt, createdBy, createdAt FROM user_goals WHERE id = ?'
   ).get(result.lastInsertRowid);
   res.status(201).json(created);
 });
@@ -460,7 +477,7 @@ router.put('/goals/:goalId', (req: AuthRequest, res: Response) => {
   db.prepare('UPDATE user_goals SET title = ?, goalCoins = ?, startAt = ?, endAt = ? WHERE id = ?')
     .run(cleanTitle, n, normStart, normEnd, goalId);
   syncPrimaryGoal(goal.userId);
-  const updated = db.prepare('SELECT id, userId, title, goalCoins, startAt, endAt, createdBy, createdAt FROM user_goals WHERE id = ?').get(goalId);
+  const updated = db.prepare('SELECT id, userId, title, goalCoins, startAt, endAt, status, completedAt, createdBy, createdAt FROM user_goals WHERE id = ?').get(goalId);
   res.json(updated);
 });
 

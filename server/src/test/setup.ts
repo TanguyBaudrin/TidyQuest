@@ -128,6 +128,8 @@ function runSchema(db: InstanceType<typeof Database>) {
       goalCoins INTEGER NOT NULL,
       startAt TEXT,
       endAt TEXT,
+      status TEXT NOT NULL DEFAULT 'active',
+      completedAt TEXT,
       createdBy INTEGER,
       createdAt TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,

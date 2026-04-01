@@ -115,7 +115,7 @@ interface DashboardProps {
     scheduledUpcoming?: Quest[];
     onDemandQuests?: Quest[];
     completedToday?: CompletedTodayEntry[];
-    myGoal?: { goalCoins: number; currentCoins: number; progress: number; goalStartAt?: string | null; goalEndAt?: string | null } | null;
+    myGoal?: { goalCoins: number; currentCoins: number; progress: number; goalStartAt?: string | null; goalEndAt?: string | null; completed?: boolean } | null;
     childrenGoals?: Array<{ id: number; displayName: string; role: string; coins: number; currentCoins?: number; goalCoins: number | null; progress: number | null; goalStartAt?: string | null; goalEndAt?: string | null }>;
     pendingRewardRequests?: Array<{ id: number; title: string; displayName: string; costCoins: number; redeemedAt: string; status: 'requested' | 'approved' | 'rejected' }>;
     currentUser: CurrentUser;
@@ -675,7 +675,10 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {gamificationEnabled && isVisible('myGoal') && myGoal && (
           <div className="tq-card tq-card-padded">
-            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--warm-text)', marginBottom: 6 }}>{t('dashboard.myGoal')}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--warm-text)' }}>{t('dashboard.myGoal')}</div>
+              {myGoal.completed && <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--health-green)', background: 'var(--health-green-bg, rgba(34,197,94,0.12))', padding: '2px 8px', borderRadius: 8 }}>{t('dashboard.goalCompleted')}</span>}
+            </div>
             <div style={{ fontSize: 12, color: 'var(--warm-text-muted)', fontWeight: 700, marginBottom: 8 }}>
               {myGoal.currentCoins}/{myGoal.goalCoins} {t('leaderboard.points')}
             </div>

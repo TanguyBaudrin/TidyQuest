@@ -52,7 +52,7 @@ router.post('/register', (req: AuthRequest, res: Response) => {
     }
   }
 
-  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  const existing = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(username);
   if (existing) {
     return res.status(409).json({ error: 'Username already taken' });
   }
@@ -97,7 +97,7 @@ router.post('/login', (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: 'username and password are required' });
   }
 
-  const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username) as any;
+  const user = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(username) as any;
   if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
     return res.status(401).json({ error: 'Invalid credentials' });
   }

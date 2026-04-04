@@ -1,88 +1,46 @@
-# TidyQuest v0.5.0-beta.1 Release Notes
+# TidyQuest v0.5.0-beta.2 Release Notes
 
-> **Date:** 2026-03-24
+> **Date:** 2026-04-01
 
-This beta release includes 6 new features (largely from community PRs by @stonkage), quality-of-life improvements, and CI fixes.
-
----
-
-## New Features
-
-### On-Demand Tasks (#17) — via PR #64 by @stonkage
-- Tasks can now be marked as **On Demand** — no fixed schedule, completeable multiple times per day
-- Optional **Show in Dashboard** toggle for on-demand tasks
-- Calendar view excludes on-demand tasks (they have no schedule)
-
-### Dashboard Restructure — via PR #64 by @stonkage
-- Dashboard split into sections: **Ready to Complete**, **On Demand**, **Scheduled**, **Completed Today**
-- **Card customization**: admin can show/hide any of 11 dashboard cards via the ⚙ button
-- **Expand/collapse**: long task lists truncated at 7 items with "Show N more" button
-
-### Points Badge (#33) — via PR #56 by @stonkage
-- Points badge in page header next to coins and streak
-- Click to cycle through periods: All Time → Week → Month → Year
-- Points calculated from sum of approved task completion coins
-
-### Avatar Login Screen (#32)
-- Login page now shows user avatars — tap your avatar to log in
-- Great for kids who find typing usernames difficult
-- Classic username/password input still available as fallback
-- New public endpoint `GET /api/auth/avatars` (no sensitive data exposed)
-
-### Task Filter by Assignee (#24)
-- **All / Mine** toggle on the dashboard's Today's Quests card
-- "Mine" shows only tasks assigned to you + unassigned tasks
-- Filter preference persisted in localStorage
-
-### Pre-defined Tasks in Existing Rooms (#59)
-- Admin can now add template tasks to any existing room via **Templates** button
-- Shows same pre-defined tasks as room creation wizard
-- Tasks already in the room are automatically excluded from the list
-
-### Per-Task Assignment in Room Creation (#57)
-- When creating a new room, each pre-defined task can now be individually assigned to a user
-- Per-task assignment overrides the room-level assignment
-- Unassigned tasks fall back to the room-level user (if set)
-
-### Larger Leaderboard Avatars (#60) — via PR #64 by @stonkage
-- Podium avatars sized by rank: 1st place 80px, 2nd 64px, 3rd 56px
-- Ranked list avatars increased from 44px to 56px
+Bug fix release addressing 10 community-reported issues plus security dependency updates.
 
 ---
 
 ## Bug Fixes
 
-- **#58**: Calendar "due in days" now uses `Math.floor` instead of `Math.ceil` — tasks due today correctly show as "today" (via PR #64)
-- **CI**: Fixed test workflow failing with "Cannot open database because the directory does not exist" — `createDatabase()` now creates the data directory automatically
+- **#67**: Countdown timer no longer shows "_h 60m" — `Math.ceil` replaced with `Math.floor` for remaining minutes (via PR #80 by @stonkage)
+- **#68**: Template task names now display human-friendly translated names instead of raw identifiers
+- **#69**: Template task labels now have proper minimum tap target size (44px) on mobile
+- **#70**: Customise home screen modal now uses an X close button instead of Cancel (via PR #80 by @stonkage)
+- **#71**: Task add form row now has minimum height to prevent layout shift (via PR #80 by @stonkage)
+- **#72**: Adding a task with an empty title now shows a red error message instead of silently failing
+- **#73**: Task edit form now auto-focuses the name field and prevents saving with empty title
+- **#75**: "Overdue" label no longer appears while health is still above 0% — aligned with server-side health calculation
+- **#78**: Hamburger menu icon now visible in dark/night theme (via PR #80 by @stonkage)
+- **#79**: Username login is now case-insensitive — "John" and "john" match the same account
+
+## New Features
+
+- **#65**: Goal completion now works — goals are automatically marked as completed when earned coins reach the target. Dashboard shows a "Completed!" badge on achieved goals.
 
 ---
 
-## Dependencies
+## Security
 
-- **flatted** upgraded from 3.3.3 to 3.4.2 (fixes CWE-1321 prototype pollution)
-
----
-
-## Breaking Changes
-
-None. This release is backward-compatible with v0.4.x data. Two new columns (`onDemand`, `showInDashboard`) are added automatically with safe defaults.
+- **path-to-regexp** 0.1.12 → 0.1.13 (fixes CVE-2026-4867, via PR #81)
+- **picomatch** 4.0.3 → 4.0.4 (fixes CVE-2026-33671 & CVE-2026-33672, via PR #77)
 
 ---
 
-## Environment Variables
+## Database Migrations
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `JWT_SECRET` | **Yes** (production) | Secret key for JWT token signing |
-| `NODE_ENV` | Recommended | Set to `production` for production deployments |
-| `TZ` | Recommended | Timezone for day/week boundaries (e.g. `Europe/Zurich`) |
-| `ADMIN_RESET_PASSWORD` | No | One-shot admin password recovery |
+Two new columns added to `user_goals` table: `status` (default: 'active') and `completedAt`. Migrations run automatically on startup.
 
 ---
 
-## Upgrade from v0.4.x
+## Upgrade from beta.1
 
-1. Pull the new Docker image: `docker pull mellowfox/tidyquest:0.5.0-beta.1`
+1. Pull the new Docker image: `docker pull mellowfox/tidyquest:0.5.0-beta.2`
 2. Restart the container
 3. Database migrations run automatically
 
@@ -90,6 +48,6 @@ None. This release is backward-compatible with v0.4.x data. Two new columns (`on
 
 ## Community
 
-Thank you to **@stonkage** for 3 merged PRs covering on-demand tasks, dashboard restructure, points badge, and larger avatars!
+Thank you to **@stonkage** for PR #80 fixing 4 CSS/UI bugs, and to **@gjincy88** for detailed bug reports!
 
 Join our [Discord](https://discord.gg/ucXmKM6y) to discuss features and report issues.

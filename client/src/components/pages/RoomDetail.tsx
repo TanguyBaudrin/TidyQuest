@@ -49,17 +49,19 @@ function getNextDueDate(lastCompletedAt: string | null, frequencyDays: number): 
   return new Date(last.getTime() + frequencyDays * 24 * 60 * 60 * 1000);
 }
 
-function formatNextDue(lastCompletedAt: string | null, frequencyDays: number, t: (k: string) => string, language?: string): { text: string; color: string } {
+function formatNextDue(lastCompletedAt: string | null, frequencyDays: number, t: (k: string) => string, language?: string, health?: number): { text: string; color: string } {
   const nextDue = getNextDueDate(lastCompletedAt, frequencyDays);
   const now = new Date();
 
   // Time-based countdown for tasks due within the next 24 hours
   const diffMs = nextDue.getTime() - now.getTime();
-  if (diffMs < 0) return { text: t('roomDetail.overdue'), color: 'var(--health-red)' };
+  // Only show overdue when health is truly 0 (aligns with server-side calculation)
+  if (diffMs < 0 && (health === undefined || health <= 0)) return { text: t('roomDetail.overdue'), color: 'var(--health-red)' };
+  if (diffMs < 0) return { text: t('roomDetail.inMinutes').replace('{m}', '1'), color: 'var(--health-yellow)' };
 
   const diffMinutes = Math.ceil(diffMs / (60 * 1000));
   const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
-  const remainingMinutes = Math.ceil((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+  const remainingMinutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
 
   if (diffMinutes < 60) {
     return { text: t('roomDetail.inMinutes').replace('{m}', `${Math.max(1, diffMinutes)}`), color: 'var(--health-yellow)' };
@@ -183,6 +185,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   const [newAssignmentUserIds, setNewAssignmentUserIds] = useState<number[]>([]);
   const [newAssignmentMode, setNewAssignmentMode] = useState<'first' | 'shared' | 'custom'>('first');
   const [newAssignmentPercentages, setNewAssignmentPercentages] = useState<Record<number, number>>({});
+  const [addTaskError, setAddTaskError] = useState('');
   const [newTaskOnDemand, setNewTaskOnDemand] = useState(false);
   const [newTaskShowInDashboard, setNewTaskShowInDashboard] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('health');
@@ -272,7 +275,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   };
 
   const saveEdit = async () => {
-    if (!editingTask) return;
+    if (!editingTask || !editForm.name.trim()) return;
     const frequencyDays = freqToDays(editForm.freqValue, editForm.freqUnit);
     const assignmentPayload =
       editForm.assignmentType === 'users' ? { assignedToChildren: false, assignedUserIds: editForm.assignmentUserIds } :
@@ -301,7 +304,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
 
     // Block if task frequency cooldown hasn't elapsed (health > 0 means not yet due)
     if (task.health > 0 && task.lastCompletedAt) {
-      const { text } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language);
+      const { text } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language, task.health);
       return { disabled: true, label: text };
     }
 
@@ -333,7 +336,11 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
   };
 
   const addTask = async () => {
-    if (!newTaskName.trim()) return;
+    if (!newTaskName.trim()) {
+      setAddTaskError(t('roomDetail.taskNameRequired'));
+      return;
+    }
+    setAddTaskError('');
     const frequencyDays = freqToDays(newFreqValue, newFreqUnit);
     const assignmentPayload =
       newAssignmentType === 'users' ? { assignedToChildren: false, assignedUserIds: newAssignmentUserIds } :
@@ -425,6 +432,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                     <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 70 }}>{t('roomDetail.name')}</label>
                     <input value={editForm.name}
                       onChange={(e) => setEditForm(f => ({ ...f, name: e.target.value }))}
+                      autoFocus
                       className="tq-input"
                       style={{ flex: 1, fontWeight: 700 }} />
                   </div>
@@ -678,7 +686,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                 </div>
                 {task.onDemand
                   ? <div className="room-task-due" style={{ fontSize: 12, fontWeight: 700, color: 'var(--warm-text-light)' }}>—</div>
-                  : (() => { const { text, color } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language); return (
+                  : (() => { const { text, color } = formatNextDue(task.lastCompletedAt, task.frequencyDays, t, language, task.health); return (
                       <div className="room-task-due" style={{ fontSize: 12, fontWeight: 700, color }}>{text}</div>
                     ); })()
                 }
@@ -775,12 +783,13 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 70 }}>{t('roomDetail.name')}</label>
                 <input value={newTaskName}
-                  onChange={(e) => setNewTaskName(e.target.value)}
+                  onChange={(e) => { setNewTaskName(e.target.value); setAddTaskError(''); }}
                   onKeyDown={(e) => e.key === 'Enter' && addTask()}
                   placeholder={t('roomDetail.taskName')}
                   className="tq-input"
-                  style={{ flex: 1, fontWeight: 700 }} />
+                  style={{ flex: 1, fontWeight: 700, borderColor: addTaskError ? 'var(--health-red)' : undefined }} />
               </div>
+              {addTaskError && <div style={{ fontSize: 11, color: 'var(--health-red)', fontWeight: 600, marginLeft: 82 }}>{addTaskError}</div>}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)', minWidth: 70 }}>{t('roomDetail.notes')}</label>
                 <textarea value={newTaskNotes}
@@ -790,7 +799,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                   className="tq-input"
                   style={{ flex: 1, resize: 'vertical' }} />
               </div>
-              <div className="task-add-form" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              <div className="task-add-form" style={{ display: 'flex', alignItems: 'center', gap: 20, minHeight: 30 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-text-light)' }}>{t('roomDetail.onDemand')}</label>
                   <input type="checkbox" checked={newTaskOnDemand}
@@ -1035,7 +1044,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
               {templateTasks.map((tt, i) => (
                 <label key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
-                  padding: '10px 12px', borderRadius: 12,
+                  padding: '10px 12px', borderRadius: 12, minHeight: 44,
                   border: `1.5px solid ${tt.selected ? 'var(--warm-accent)' : 'var(--warm-border)'}`,
                   backgroundColor: tt.selected ? 'var(--warm-accent-light)' : 'var(--warm-bg-subtle)',
                   transition: 'all 0.15s ease',
@@ -1047,7 +1056,7 @@ export function RoomDetail({ room, language, isAdmin, currentUserId, currentUser
                     style={{ width: 16, height: 16, accentColor: 'var(--warm-accent)', cursor: 'pointer' }} />
                   <TaskIcon iconKey={tt.iconKey || 'sparkle'} size={20} />
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--warm-text)' }}>
-                    {tt.translationKey ? translateTask(tt.translationKey, tt.name) : tt.name}
+                    {translateTask(tt.name, tt.translationKey)}
                   </span>
                   <EffortDots effort={tt.effort} />
                 </label>

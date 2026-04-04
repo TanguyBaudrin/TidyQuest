@@ -175,12 +175,16 @@ router.get('/', (req: AuthRequest, res: Response) => {
   }
 
   const myCurrentCoins = user.goalCoins ? getGoalCoinsWithinPeriod(user) : user.coins;
+  const myGoalStatus = user.goalCoins ? (db.prepare(
+    "SELECT status FROM user_goals WHERE userId = ? AND goalCoins = ? ORDER BY CASE WHEN status = 'active' THEN 0 ELSE 1 END, id DESC LIMIT 1"
+  ).get(user.id, user.goalCoins) as { status: string } | undefined)?.status || 'active' : null;
   const myGoal = user.goalCoins ? {
     goalCoins: user.goalCoins,
     currentCoins: myCurrentCoins,
     goalStartAt: user.goalStartAt || null,
     goalEndAt: user.goalEndAt || null,
     progress: Math.min(100, Math.round((myCurrentCoins / user.goalCoins) * 100)),
+    completed: myGoalStatus === 'completed',
   } : null;
 
   const childrenGoals = user.role === 'admin'
